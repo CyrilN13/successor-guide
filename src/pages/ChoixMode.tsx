@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "crypto";
+
 
 const generateToken = () => {
   return crypto.randomUUID();
