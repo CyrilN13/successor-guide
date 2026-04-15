@@ -14,7 +14,404 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      actif_items: {
+        Row: {
+          declaration_id: string | null
+          details: Json | null
+          id: string
+          justificatif_url: string | null
+          libelle: string | null
+          pre_rempli: boolean | null
+          type_bien: string | null
+          valeur_estimee: number | null
+        }
+        Insert: {
+          declaration_id?: string | null
+          details?: Json | null
+          id?: string
+          justificatif_url?: string | null
+          libelle?: string | null
+          pre_rempli?: boolean | null
+          type_bien?: string | null
+          valeur_estimee?: number | null
+        }
+        Update: {
+          declaration_id?: string | null
+          details?: Json | null
+          id?: string
+          justificatif_url?: string | null
+          libelle?: string | null
+          pre_rempli?: boolean | null
+          type_bien?: string | null
+          valeur_estimee?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actif_items_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: false
+            referencedRelation: "declarations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action_type: string | null
+          created_at: string | null
+          data_hash: string | null
+          declaration_id: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          created_at?: string | null
+          data_hash?: string | null
+          declaration_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          created_at?: string | null
+          data_hash?: string | null
+          declaration_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      calculation_results: {
+        Row: {
+          actif_brut: number | null
+          actif_imposable: number | null
+          actif_net: number | null
+          computed_at: string | null
+          declaration_id: string | null
+          estimation_basse: number | null
+          estimation_haute: number | null
+          estimation_moyenne: number | null
+          id: string
+          passif_total: number | null
+          rappel_donations: number | null
+        }
+        Insert: {
+          actif_brut?: number | null
+          actif_imposable?: number | null
+          actif_net?: number | null
+          computed_at?: string | null
+          declaration_id?: string | null
+          estimation_basse?: number | null
+          estimation_haute?: number | null
+          estimation_moyenne?: number | null
+          id?: string
+          passif_total?: number | null
+          rappel_donations?: number | null
+        }
+        Update: {
+          actif_brut?: number | null
+          actif_imposable?: number | null
+          actif_net?: number | null
+          computed_at?: string | null
+          declaration_id?: string | null
+          estimation_basse?: number | null
+          estimation_haute?: number | null
+          estimation_moyenne?: number | null
+          id?: string
+          passif_total?: number | null
+          rappel_donations?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calculation_results_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: true
+            referencedRelation: "declarations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      declarations: {
+        Row: {
+          anonymous_token: string | null
+          created_at: string | null
+          current_step: number | null
+          eligibility_passed: boolean | null
+          id: string
+          mode: string | null
+          purge_scheduled_at: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anonymous_token?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          eligibility_passed?: boolean | null
+          id?: string
+          mode?: string | null
+          purge_scheduled_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anonymous_token?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          eligibility_passed?: boolean | null
+          id?: string
+          mode?: string | null
+          purge_scheduled_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      defunts: {
+        Row: {
+          birth_date: string | null
+          death_date: string | null
+          death_place: string | null
+          declaration_id: string | null
+          domicile: string | null
+          full_name: string | null
+          id: string
+          marital_status: string | null
+          matrimonial_regime: string | null
+          nationality: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          death_date?: string | null
+          death_place?: string | null
+          declaration_id?: string | null
+          domicile?: string | null
+          full_name?: string | null
+          id?: string
+          marital_status?: string | null
+          matrimonial_regime?: string | null
+          nationality?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          death_date?: string | null
+          death_place?: string | null
+          declaration_id?: string | null
+          domicile?: string | null
+          full_name?: string | null
+          id?: string
+          marital_status?: string | null
+          matrimonial_regime?: string | null
+          nationality?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defunts_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: true
+            referencedRelation: "declarations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donations: {
+        Row: {
+          beneficiaire_name: string | null
+          dans_15_ans: boolean | null
+          date_donation: string | null
+          declaration_id: string | null
+          enregistree_fiscalement: boolean | null
+          id: string
+          montant: number | null
+          pre_rempli: boolean | null
+          type_donation: string | null
+        }
+        Insert: {
+          beneficiaire_name?: string | null
+          dans_15_ans?: boolean | null
+          date_donation?: string | null
+          declaration_id?: string | null
+          enregistree_fiscalement?: boolean | null
+          id?: string
+          montant?: number | null
+          pre_rempli?: boolean | null
+          type_donation?: string | null
+        }
+        Update: {
+          beneficiaire_name?: string | null
+          dans_15_ans?: boolean | null
+          date_donation?: string | null
+          declaration_id?: string | null
+          enregistree_fiscalement?: boolean | null
+          id?: string
+          montant?: number | null
+          pre_rempli?: boolean | null
+          type_donation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donations_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: false
+            referencedRelation: "declarations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      heritiers: {
+        Row: {
+          birth_date: string | null
+          declaration_id: string | null
+          email_notification: string | null
+          full_name: string | null
+          id: string
+          lien_parente: string | null
+          ordre: number | null
+          status: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          declaration_id?: string | null
+          email_notification?: string | null
+          full_name?: string | null
+          id?: string
+          lien_parente?: string | null
+          ordre?: number | null
+          status?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          declaration_id?: string | null
+          email_notification?: string | null
+          full_name?: string | null
+          id?: string
+          lien_parente?: string | null
+          ordre?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heritiers_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: false
+            referencedRelation: "declarations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      passif_items: {
+        Row: {
+          declaration_id: string | null
+          existait_au_deces: string | null
+          id: string
+          justificatif_url: string | null
+          libelle: string | null
+          montant: number | null
+          pre_rempli: boolean | null
+          type_dette: string | null
+        }
+        Insert: {
+          declaration_id?: string | null
+          existait_au_deces?: string | null
+          id?: string
+          justificatif_url?: string | null
+          libelle?: string | null
+          montant?: number | null
+          pre_rempli?: boolean | null
+          type_dette?: string | null
+        }
+        Update: {
+          declaration_id?: string | null
+          existait_au_deces?: string | null
+          id?: string
+          justificatif_url?: string | null
+          libelle?: string | null
+          montant?: number | null
+          pre_rempli?: boolean | null
+          type_dette?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passif_items_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: false
+            referencedRelation: "declarations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          accepted_cgu: boolean | null
+          accepted_privacy: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          accepted_cgu?: boolean | null
+          accepted_privacy?: boolean | null
+          created_at?: string | null
+          email: string
+          id: string
+        }
+        Update: {
+          accepted_cgu?: boolean | null
+          accepted_privacy?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      uploaded_documents: {
+        Row: {
+          declaration_id: string | null
+          deleted_at: string | null
+          detected_type: string | null
+          doc_type: string | null
+          extraction_payload: Json | null
+          extraction_status: string | null
+          id: string
+          storage_path: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          declaration_id?: string | null
+          deleted_at?: string | null
+          detected_type?: string | null
+          doc_type?: string | null
+          extraction_payload?: Json | null
+          extraction_status?: string | null
+          id?: string
+          storage_path?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          declaration_id?: string | null
+          deleted_at?: string | null
+          detected_type?: string | null
+          doc_type?: string | null
+          extraction_payload?: Json | null
+          extraction_status?: string | null
+          id?: string
+          storage_path?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uploaded_documents_declaration_id_fkey"
+            columns: ["declaration_id"]
+            isOneToOne: false
+            referencedRelation: "declarations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
