@@ -137,6 +137,7 @@ export type Database = {
           anonymous_token: string | null
           created_at: string | null
           current_step: number | null
+          eligibility_answers: Json | null
           eligibility_passed: boolean | null
           id: string
           mode: string | null
@@ -149,6 +150,7 @@ export type Database = {
           anonymous_token?: string | null
           created_at?: string | null
           current_step?: number | null
+          eligibility_answers?: Json | null
           eligibility_passed?: boolean | null
           id?: string
           mode?: string | null
@@ -161,6 +163,7 @@ export type Database = {
           anonymous_token?: string | null
           created_at?: string | null
           current_step?: number | null
+          eligibility_answers?: Json | null
           eligibility_passed?: boolean | null
           id?: string
           mode?: string | null
