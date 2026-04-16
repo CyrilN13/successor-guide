@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import ChoixMode from "./pages/ChoixMode";
 import Diagnostic from "./pages/Diagnostic";
 import Etape1Defunt from "./pages/Etape1Defunt";
+import Etape2Heritiers from "./pages/Etape2Heritiers";
 import Etape from "./pages/Etape";
 import Synthese from "./pages/Synthese";
 import Connexion from "./pages/Connexion";
