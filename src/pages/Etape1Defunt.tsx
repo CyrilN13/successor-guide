@@ -153,7 +153,7 @@ const Etape1Defunt = () => {
         .maybeSingle();
 
       if (defunt) {
-        const details = (defunt.details as Record<string, string>) ?? {};
+        const details = ((defunt as any).details as Record<string, string>) ?? {};
         form.reset({
           nom_naissance: defunt.full_name?.split(" ")[0] ?? "",
           nom_usage: details.nom_usage ?? "",
@@ -204,7 +204,7 @@ const Etape1Defunt = () => {
       },
     };
 
-    await supabase.from("defunts").upsert(payload, { onConflict: "declaration_id" });
+    await (supabase.from("defunts") as any).upsert(payload, { onConflict: "declaration_id" });
   }, [declarationId, form, showRegime]);
 
   // Debounced blur handler

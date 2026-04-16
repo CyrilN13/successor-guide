@@ -180,6 +180,7 @@ export type Database = {
           death_date: string | null
           death_place: string | null
           declaration_id: string | null
+          details: Json | null
           domicile: string | null
           full_name: string | null
           id: string
@@ -192,6 +193,7 @@ export type Database = {
           death_date?: string | null
           death_place?: string | null
           declaration_id?: string | null
+          details?: Json | null
           domicile?: string | null
           full_name?: string | null
           id?: string
@@ -204,6 +206,7 @@ export type Database = {
           death_date?: string | null
           death_place?: string | null
           declaration_id?: string | null
+          details?: Json | null
           domicile?: string | null
           full_name?: string | null
           id?: string
