@@ -20,17 +20,32 @@ const ChoixMode = () => {
       localStorage.setItem("deesse_token", token);
     }
 
-    const { error } = await supabase.from("declarations").insert({
-      mode,
-      anonymous_token: token,
-      user_id: null,
-      status: "draft",
-      current_step: 0,
-    });
+    // Check if a declaration already exists for this token
+    const { data: existing } = await supabase
+      .from("declarations")
+      .select("id")
+      .eq("anonymous_token", token)
+      .maybeSingle();
 
-    if (error) {
-      console.error("Erreur création déclaration:", error);
-      return;
+    if (existing) {
+      // Update the mode on the existing declaration
+      await supabase
+        .from("declarations")
+        .update({ mode })
+        .eq("id", existing.id);
+    } else {
+      const { error } = await supabase.from("declarations").insert({
+        mode,
+        anonymous_token: token,
+        user_id: null,
+        status: "draft",
+        current_step: 0,
+      });
+
+      if (error) {
+        console.error("Erreur création déclaration:", error);
+        return;
+      }
     }
 
     navigate("/diagnostic");
