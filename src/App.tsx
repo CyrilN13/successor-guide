@@ -27,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/choix-mode" element={<ChoixMode />} />
             <Route path="/diagnostic" element={<Diagnostic />} />
+            <Route path="/etape/1" element={<Etape1Defunt />} />
             <Route path="/etape/:numero" element={<Etape />} />
             <Route path="/synthese" element={<Synthese />} />
             <Route path="/connexion" element={<Connexion />} />
