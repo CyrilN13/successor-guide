@@ -4,17 +4,15 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import {
-  CalendarIcon,
   Plus,
   Pencil,
   Trash2,
   AlertTriangle,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { DateInput } from "@/components/ui/date-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
