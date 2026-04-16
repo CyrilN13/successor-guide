@@ -204,7 +204,7 @@ const Etape1Defunt = () => {
       },
     };
 
-    await supabase.from("defunts").upsert(payload, { onConflict: "declaration_id" });
+    await (supabase.from("defunts") as any).upsert(payload, { onConflict: "declaration_id" });
   }, [declarationId, form, showRegime]);
 
   // Debounced blur handler
