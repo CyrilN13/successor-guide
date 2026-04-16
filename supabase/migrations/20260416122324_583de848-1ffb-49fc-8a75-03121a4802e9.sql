@@ -1,0 +1,1 @@
+ALTER TABLE public.declarations ADD COLUMN eligibility_answers jsonb DEFAULT NULL;
