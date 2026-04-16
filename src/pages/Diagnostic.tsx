@@ -198,15 +198,19 @@ const Diagnostic = () => {
         >
           Précédent
         </Button>
-        {allAnswered && (
-          <Button
-            onClick={evaluate}
-            disabled={saving}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            Continuer
-          </Button>
-        )}
+        <Button
+          onClick={() => {
+            if (currentQ < QUESTIONS.length - 1) {
+              setCurrentQ((prev) => prev + 1);
+            } else {
+              evaluate();
+            }
+          }}
+          disabled={answers[currentQ] === undefined || saving}
+          className="bg-accent text-accent-foreground hover:bg-accent/90"
+        >
+          {currentQ === QUESTIONS.length - 1 ? "Continuer" : "Suivant"}
+        </Button>
       </div>
     </div>
   );
