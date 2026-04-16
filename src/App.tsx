@@ -9,6 +9,7 @@ import ChoixMode from "./pages/ChoixMode";
 import Diagnostic from "./pages/Diagnostic";
 import Etape1Defunt from "./pages/Etape1Defunt";
 import Etape2Heritiers from "./pages/Etape2Heritiers";
+import Etape3Actif from "./pages/Etape3Actif";
 import Etape from "./pages/Etape";
 import Synthese from "./pages/Synthese";
 import Connexion from "./pages/Connexion";
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/diagnostic" element={<Diagnostic />} />
             <Route path="/etape/1" element={<Etape1Defunt />} />
             <Route path="/etape/2" element={<Etape2Heritiers />} />
+            <Route path="/etape/3" element={<Etape3Actif />} />
             <Route path="/etape/:numero" element={<Etape />} />
             <Route path="/synthese" element={<Synthese />} />
             <Route path="/connexion" element={<Connexion />} />
