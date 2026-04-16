@@ -1,0 +1,1 @@
+ALTER TABLE public.defunts ADD COLUMN details jsonb DEFAULT NULL;
