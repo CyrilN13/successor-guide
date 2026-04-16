@@ -34,10 +34,19 @@ const Diagnostic = () => {
   const [saving, setSaving] = useState(false);
 
   const handleAnswer = (value: "oui" | "non") => {
-    setAnswers((prev) => ({ ...prev, [currentQ]: value }));
+    const updated = { ...answers, [currentQ]: value };
+    setAnswers(updated);
+
+    // Auto-advance after a short delay
+    setTimeout(() => {
+      if (currentQ < QUESTIONS.length - 1) {
+        setCurrentQ((prev) => prev + 1);
+      }
+    }, 400);
   };
 
-  const canContinue = answers[currentQ] !== undefined;
+  const allAnswered = Object.keys(answers).length === QUESTIONS.length;
+  const canContinue = allAnswered;
 
   const handleNext = () => {
     if (currentQ < QUESTIONS.length - 1) {
@@ -189,13 +198,15 @@ const Diagnostic = () => {
         >
           Précédent
         </Button>
-        <Button
-          onClick={handleNext}
-          disabled={!canContinue || saving}
-          className="bg-accent text-accent-foreground hover:bg-accent/90"
-        >
-          {currentQ === QUESTIONS.length - 1 ? "Continuer" : "Suivant"}
-        </Button>
+        {allAnswered && (
+          <Button
+            onClick={evaluate}
+            disabled={saving}
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
+          >
+            Continuer
+          </Button>
+        )}
       </div>
     </div>
   );
