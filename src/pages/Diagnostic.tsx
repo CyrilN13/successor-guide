@@ -34,10 +34,19 @@ const Diagnostic = () => {
   const [saving, setSaving] = useState(false);
 
   const handleAnswer = (value: "oui" | "non") => {
-    setAnswers((prev) => ({ ...prev, [currentQ]: value }));
+    const updated = { ...answers, [currentQ]: value };
+    setAnswers(updated);
+
+    // Auto-advance after a short delay
+    setTimeout(() => {
+      if (currentQ < QUESTIONS.length - 1) {
+        setCurrentQ((prev) => prev + 1);
+      }
+    }, 400);
   };
 
-  const canContinue = answers[currentQ] !== undefined;
+  const allAnswered = Object.keys(answers).length === QUESTIONS.length;
+  const canContinue = allAnswered;
 
   const handleNext = () => {
     if (currentQ < QUESTIONS.length - 1) {
