@@ -312,6 +312,7 @@ export type Database = {
       passif_items: {
         Row: {
           declaration_id: string | null
+          details: Json | null
           existait_au_deces: string | null
           id: string
           justificatif_url: string | null
@@ -322,6 +323,7 @@ export type Database = {
         }
         Insert: {
           declaration_id?: string | null
+          details?: Json | null
           existait_au_deces?: string | null
           id?: string
           justificatif_url?: string | null
@@ -332,6 +334,7 @@ export type Database = {
         }
         Update: {
           declaration_id?: string | null
+          details?: Json | null
           existait_au_deces?: string | null
           id?: string
           justificatif_url?: string | null
