@@ -244,6 +244,12 @@ const Etape1Defunt = () => {
     navigate("/etape/2");
   };
 
+  const onInvalid = () => {
+    // Scroll to first error so the user understands why nothing happened
+    const firstError = document.querySelector('[aria-invalid="true"]');
+    firstError?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   // No-op kept for compatibility with existing onBlur handlers — autosave is now reactive via useDebounce
   const handleFieldBlur = useCallback(() => {}, []);
 
