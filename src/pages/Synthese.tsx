@@ -210,9 +210,7 @@ const Synthese = () => {
 
   // ─── Snapshot + status update ───
   const persistSnapshot = useCallback(async () => {
-    if (!declarationId || exported) return;
-    const purgeDate = new Date();
-    purgeDate.setDate(purgeDate.getDate() + 90);
+    if (!declarationId) return;
 
     await (supabase.from("calculation_results") as any).upsert(
       {
@@ -230,19 +228,28 @@ const Synthese = () => {
       { onConflict: "declaration_id" }
     );
 
-    await supabase
+    // Récupère purge_scheduled_at actuel — ne le réécrit que s'il est null
+    const { data: declRow } = await supabase
       .from("declarations")
-      .update({
-        status: "exported",
-        purge_scheduled_at: purgeDate.toISOString(),
-        current_step: 7,
-      })
-      .eq("id", declarationId);
+      .select("purge_scheduled_at")
+      .eq("id", declarationId)
+      .maybeSingle();
+
+    const updatePayload: Record<string, any> = {
+      status: "exported",
+      current_step: 7,
+    };
+    if (!declRow?.purge_scheduled_at) {
+      const purgeDate = new Date();
+      purgeDate.setDate(purgeDate.getDate() + 90);
+      updatePayload.purge_scheduled_at = purgeDate.toISOString();
+    }
+
+    await supabase.from("declarations").update(updatePayload).eq("id", declarationId);
 
     setExported(true);
   }, [
     declarationId,
-    exported,
     actifBrut,
     passifTotal,
     actifNet,
@@ -252,6 +259,47 @@ const Synthese = () => {
     droitsMoyen,
     droitsHaute,
   ]);
+
+  // ─── Edge function CERFA download ───
+  const handleCerfaDownload = async (type: "principal" | "av") => {
+    if (!declarationId) return;
+    const kind = type === "principal" ? "cerfa" : "cerfa-av";
+    setExporting(kind);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-cerfa", {
+        body: { declarationId, type },
+      });
+      if (error) throw error;
+
+      // data peut être un Blob (responseType binaire) ou un ArrayBuffer
+      const blob =
+        data instanceof Blob
+          ? data
+          : new Blob([data as ArrayBuffer], { type: "application/pdf" });
+
+      const filename =
+        type === "principal"
+          ? "CERFA-2705-SD-Deesse.pdf"
+          : "CERFA-2705-A-SD-Deesse.pdf";
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      await persistSnapshot();
+      toast.success("Document téléchargé");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erreur lors de la génération du PDF");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   // ─── PDF generators ───
   const buildRecapPdf = () => {
