@@ -149,6 +149,10 @@ const Synthese = () => {
       a.type_bien === "assurance_vie" &&
       (a.details?.date_primes === "apres_70" || a.details?.date_primes === "mixte")
   );
+  // Annexe CERFA 2705-A-SD : ne s'affiche que si au moins un actif AV a versement_apres_70_ans=true
+  const hasAVAnnexe = actifs.some(
+    (a) => a.type_bien === "assurance_vie" && a.details?.versement_apres_70_ans === true
+  );
   const hasRenoncant = heritiers.some((h) => h.status === "renoncant");
 
   if (hasImmoLourd)
