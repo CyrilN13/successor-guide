@@ -839,9 +839,9 @@ const Synthese = () => {
               )}
               Checklist des pièces (PDF)
             </Button>
-            {hasAVApres70 && (
+            {hasAVAnnexe && (
               <Button
-                onClick={() => handleExport("cerfa-av")}
+                onClick={() => handleCerfaDownload("av")}
                 disabled={!!exporting}
                 variant="secondary"
                 className="justify-start"
@@ -851,7 +851,7 @@ const Synthese = () => {
                 ) : (
                   <FileText className="h-4 w-4" />
                 )}
-                CERFA 2705-A-SD (assurance-vie)
+                Télécharger le CERFA 2705-A-SD
               </Button>
             )}
           </div>
