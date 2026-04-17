@@ -11,6 +11,7 @@ import Etape1Defunt from "./pages/Etape1Defunt";
 import Etape2Heritiers from "./pages/Etape2Heritiers";
 import Etape3Actif from "./pages/Etape3Actif";
 import Etape4Passif from "./pages/Etape4Passif";
+import Etape5Donations from "./pages/Etape5Donations";
 import Etape from "./pages/Etape";
 import Synthese from "./pages/Synthese";
 import Connexion from "./pages/Connexion";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/etape/2" element={<Etape2Heritiers />} />
             <Route path="/etape/3" element={<Etape3Actif />} />
             <Route path="/etape/4" element={<Etape4Passif />} />
+            <Route path="/etape/5" element={<Etape5Donations />} />
             <Route path="/etape/6" element={<Synthese />} />
             <Route path="/etape/:numero" element={<Etape />} />
             <Route path="/synthese" element={<Synthese />} />
