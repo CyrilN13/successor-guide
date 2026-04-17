@@ -1,60 +1,56 @@
 
 
-## Problème identifié
+## Root cause (confirmed via DB query)
 
-À l'étape 3, les comptes bancaires n'apparaissent jamais après ajout, alors que les véhicules / biens immobiliers sont bien enregistrés (vérifié en base : 2 actifs présents, 0 compte_bancaire).
+Two independent problems combine to break steps 5 and 6:
 
-### Diagnostic technique
+### Bug A — RLS bloque `defunts`, `donations`, `calculation_results`, `uploaded_documents` pour les anonymes
 
-Le composant `Etape3Actif.tsx` utilise **un seul `useForm`** instancié au montage de la page avec `resolver: zodResolver(schema)`. Le problème :
+Vérification base : sur les 5 dernières déclarations, **0 ligne `defunts`** existe. Toutes les autosaves de l'étape 1 sont silencieusement rejetées.
 
-1. **Le resolver est figé sur le type initial** (`compte_bancaire`). Quand l'utilisateur ouvre le formulaire pour un autre type (immobilier, véhicule…), le resolver continue à valider le schéma `compte_bancaire`. Les champs absents ne sont pas enregistrés par RHF, donc la validation passe par chance — c'est pour ça que les autres types fonctionnent.
-2. **Pour `compte_bancaire` lui-même**, le resolver exige strictement `libelle`, `banque`, `solde > 0`. Si une erreur survient (ex: champ `solde` vidé, `banque` non rempli, ou erreur Supabase silencieuse), `onSubmit` n'est jamais appelé et **aucun toast d'erreur** ne s'affiche.
-3. **Les erreurs Supabase sont avalées** : `await supabase.from("actif_items").insert(payload)` ne vérifie jamais `error`. Si RLS rejette ou si la colonne pose problème, l'utilisateur ne voit rien.
-4. **Les détails JSONB contiennent des chaînes vides `""`** au lieu de `null` (visible en base sur véhicule : `annee: ""`). Sain mais peu propre.
+Les tables `actif_items`, `heritiers`, `passif_items` ont des policies `anon_insert/select/update/delete` correctement configurées. Mais `defunts`, `donations`, `calculation_results` et `uploaded_documents` n'ont qu'une policy `*_via_declaration` qui exige `d.user_id = auth.uid()`. En mode anonyme `auth.uid()` est null → tous les insert/update sont rejetés silencieusement (le code ne vérifie pas `error`).
 
-### Bugs annexes confirmés en base
+### Bug B — `Synthese.tsx` lit la mauvaise clé localStorage
 
-- Déclaration test `f932d9fe…` (current_step=2) : aucun item — confirme que les comptes bancaires ne se sauvegardent pas.
-- Déclaration `c08acda1…` : que des immobilier/véhicule, jamais de compte bancaire malgré les tentatives.
+Ligne 100 : `localStorage.getItem("deesse_declaration_id")`. Cette clé **n'est jamais écrite** ailleurs dans l'app (toutes les pages utilisent `deesse_token`). Donc à l'étape 6 la valeur est `null` → redirection forcée vers `/etape/1`. C'est pour ça que "Sauvegarder et continuer" à l'étape 5 (qui pousse vers `/etape/6`) renvoie immédiatement à l'étape 1.
 
 ## Plan de correction
 
-### 1. Recréer le `useForm` à chaque changement de type
+### 1. Migration SQL — ajouter les policies anon manquantes
 
-Utiliser une `key` sur le composant `<Dialog>` ou faire un `form.reset` qui inclut un changement de resolver. Le plus propre : extraire le formulaire modal dans un sous-composant `<AssetDialogForm type={activeType} … />` qui reçoit `activeType` en prop et instancie son propre `useForm` avec le bon schéma. Démontage/remontage automatique au changement de type via `key={activeType}`.
-
-### 2. Gérer les erreurs Supabase explicitement
-
-Dans `onSubmit` :
-```ts
-const { error } = await supabase.from("actif_items").insert(payload);
-if (error) {
-  toast.error("Erreur lors de l'enregistrement : " + error.message);
-  return;
-}
+Sur 4 tables (`defunts`, `donations`, `calculation_results`, `uploaded_documents`) ajouter les 4 policies (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) pour `anon, authenticated` avec la même condition que les autres tables :
+```sql
+EXISTS (SELECT 1 FROM declarations d
+        WHERE d.id = <table>.declaration_id
+          AND d.user_id IS NULL
+          AND d.anonymous_token IS NOT NULL)
 ```
-Idem pour `update` et `delete`.
 
-### 3. Afficher un toast en cas de validation échouée
+### 2. `Synthese.tsx` — fallback robuste sur le token
 
-Passer un second handler `onInvalid` à `form.handleSubmit(onSubmit, onInvalid)` qui affiche un toast récapitulant les champs manquants — l'utilisateur saura immédiatement qu'il doit corriger le formulaire.
+Remplacer la lecture de `deesse_declaration_id` par : si présente l'utiliser, sinon récupérer la déclaration via `anonymous_token = localStorage.getItem("deesse_token")` (même pattern que `Etape1Defunt.tsx`). Si toujours rien → redirect étape 1.
 
-### 4. Nettoyer le payload `details`
+### 3. Feedback d'erreur sur l'autosave étape 1
 
-Convertir les `""` en `null` avant d'écrire dans Supabase pour éviter du bruit dans les JSONB.
+Dans `Etape1Defunt.tsx` `autoSave()` : vérifier `{ error }` du upsert et passer `saveStatus` à `"error"` + un toast pour que l'utilisateur ne saisisse plus 30 minutes dans le vide.
 
-### 5. Recharger après insertion : déjà OK
+### 4. Vérifier les autres pages utilisant `deesse_declaration_id`
 
-`loadItems(declarationId)` est bien appelé après `track()`. Le bug d'affichage venait uniquement du fait que l'insert n'avait jamais lieu.
+Recherche rapide pour s'assurer qu'aucune autre page ne dépend de cette clé fantôme — sinon appliquer le même fallback token.
+
+## Pas besoin d'inscription forcée
+
+L'inscription anonyme fonctionne correctement pour `actif_items`/`heritiers`/`passif_items`. Le problème est purement RLS sur 4 tables oubliées + un bug de clé localStorage. Pas besoin de bloquer l'utilisateur derrière une création de compte.
 
 ## Fichiers concernés
 
-- `src/pages/Etape3Actif.tsx` — refactor : extraction du modal en sous-composant `AssetDialogForm` avec `useForm` propre + gestion des erreurs Supabase + toasts validation.
+- nouvelle migration SQL — 16 policies à créer
+- `src/pages/Synthese.tsx` — fallback token
+- `src/pages/Etape1Defunt.tsx` — gestion d'erreur `upsert` + toast
 
 ## Résultat attendu
 
-- Ajout d'un compte bancaire fonctionnel (apparaît immédiatement dans la catégorie ouverte).
-- Toute erreur (validation ou réseau/RLS) remonte sous forme de toast clair.
-- Aucun changement visuel hormis les messages d'erreur.
+- La date de décès se sauvegarde réellement → l'alerte étape 5 disparaît.
+- Le bouton "Sauvegarder et continuer" navigue bien vers `/etape/6` au lieu de revenir étape 1.
+- Toute future erreur RLS apparaîtra immédiatement à l'écran.
 
