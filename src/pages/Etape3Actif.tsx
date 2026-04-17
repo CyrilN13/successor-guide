@@ -40,6 +40,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SaveIndicator } from "@/components/SaveIndicator";
+import { useSaveStatus } from "@/hooks/useSaveStatus";
 
 import {
   ASSET_TYPES,
@@ -168,6 +170,7 @@ const Etape3Actif = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<AssetTypeKey>("compte_bancaire");
   const [saving, setSaving] = useState(false);
+  const { status: saveStatus, track } = useSaveStatus();
 
   const config = ASSET_CONFIGS[activeType];
   const schema = buildSchema(config);
@@ -259,11 +262,13 @@ const Etape3Actif = () => {
       details,
     };
 
-    if (editingId) {
-      await (supabase.from("actif_items") as any).update(payload).eq("id", editingId);
-    } else {
-      await (supabase.from("actif_items") as any).insert(payload);
-    }
+    await track(async () => {
+      if (editingId) {
+        await (supabase.from("actif_items") as any).update(payload).eq("id", editingId);
+      } else {
+        await (supabase.from("actif_items") as any).insert(payload);
+      }
+    });
 
     await loadItems(declarationId);
     setSaving(false);
@@ -272,7 +277,7 @@ const Etape3Actif = () => {
 
   const deleteItem = async (id: string) => {
     if (!declarationId) return;
-    await supabase.from("actif_items").delete().eq("id", id);
+    await track(() => supabase.from("actif_items").delete().eq("id", id) as any);
     await loadItems(declarationId);
   };
 
@@ -287,6 +292,7 @@ const Etape3Actif = () => {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
+      <SaveIndicator status={saveStatus} />
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">

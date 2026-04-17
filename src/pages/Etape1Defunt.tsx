@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,8 @@ import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
 import { supabase } from "@/integrations/supabase/client";
+import { useDebounce } from "@/hooks/useDebounce";
+import { SaveIndicator, type SaveStatus } from "@/components/SaveIndicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,6 +103,9 @@ const Etape1Defunt = () => {
   const navigate = useNavigate();
   const [declarationId, setDeclarationId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const initialLoadDone = useRef(false);
+  const savedTimer = useRef<number | null>(null);
 
   const form = useForm<DefuntFormValues>({
     resolver: zodResolver(defuntSchema),
@@ -119,6 +124,9 @@ const Etape1Defunt = () => {
       regime_matrimonial: "",
     },
   });
+
+  const watched = form.watch();
+  const debouncedValues = useDebounce(watched, 800);
 
   const situationMatrimoniale = form.watch("situation_matrimoniale");
   const showRegime = situationMatrimoniale === "Marié(e)";
@@ -165,24 +173,27 @@ const Etape1Defunt = () => {
           regime_matrimonial: defunt.matrimonial_regime ?? "",
         });
       }
+      // Allow autosave to start AFTER initial reset propagates
+      setTimeout(() => {
+        initialLoadDone.current = true;
+      }, 100);
     };
     loadData();
   }, [form]);
 
-  // Auto-save on blur (debounced)
-  const autoSave = useCallback(async () => {
+  // Auto-save (debounced via useDebounce on watched form values)
+  const autoSave = useCallback(async (values: DefuntFormValues) => {
     if (!declarationId) return;
-    const values = form.getValues();
 
     const payload = {
       declaration_id: declarationId,
-      full_name: `${values.nom_naissance} ${values.prenoms}`.trim(),
+      full_name: `${values.nom_naissance ?? ""} ${values.prenoms ?? ""}`.trim() || null,
       birth_date: values.birth_date ? format(values.birth_date, "yyyy-MM-dd") : null,
       death_date: values.death_date ? format(values.death_date, "yyyy-MM-dd") : null,
       death_place: values.lieu_deces || null,
       domicile: [values.adresse_rue, values.adresse_code_postal, values.adresse_ville, values.adresse_pays]
         .filter(Boolean)
-        .join(", "),
+        .join(", ") || null,
       nationality: values.nationalite || null,
       marital_status: values.situation_matrimoniale || null,
       matrimonial_regime: showRegime ? values.regime_matrimonial || null : null,
@@ -198,20 +209,25 @@ const Etape1Defunt = () => {
       },
     };
 
+    setSaveStatus("saving");
     await (supabase.from("defunts") as any).upsert(payload, { onConflict: "declaration_id" });
-  }, [declarationId, form, showRegime]);
+    setSaveStatus("saved");
+    if (savedTimer.current) window.clearTimeout(savedTimer.current);
+    savedTimer.current = window.setTimeout(() => setSaveStatus("idle"), 1500);
+  }, [declarationId, showRegime]);
 
-  // Debounced blur handler
-  const handleFieldBlur = useCallback(() => {
-    const timer = setTimeout(() => autoSave(), 800);
-    return () => clearTimeout(timer);
-  }, [autoSave]);
+  // Trigger autosave whenever debounced values change (after initial load)
+  useEffect(() => {
+    if (!declarationId || !initialLoadDone.current) return;
+    autoSave(debouncedValues as DefuntFormValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedValues, declarationId]);
 
   const onSubmit = async (values: DefuntFormValues) => {
     if (!declarationId) return;
     setSaving(true);
 
-    await autoSave();
+    await autoSave(values);
     await supabase
       .from("declarations")
       .update({ current_step: 1 })
@@ -221,8 +237,12 @@ const Etape1Defunt = () => {
     navigate("/etape/2");
   };
 
+  // No-op kept for compatibility with existing onBlur handlers — autosave is now reactive via useDebounce
+  const handleFieldBlur = useCallback(() => {}, []);
+
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
+      <SaveIndicator status={saveStatus} />
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
