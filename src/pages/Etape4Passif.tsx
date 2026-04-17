@@ -94,6 +94,7 @@ const Etape4Passif = () => {
   const [saving, setSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { status: saveStatus, track } = useSaveStatus();
 
   const form = useForm<PassifFormValues>({
     resolver: zodResolver(passifSchema),
@@ -204,27 +205,29 @@ const Etape4Passif = () => {
 
     let itemId = editingId;
 
-    if (editingId) {
-      await (supabase.from("passif_items") as any)
-        .update(payload)
-        .eq("id", editingId);
-    } else {
-      const { data } = await (supabase.from("passif_items") as any)
-        .insert(payload)
-        .select("id")
-        .single();
-      if (data) itemId = data.id;
-    }
-
-    // Upload justificatif if provided
-    if (file && itemId) {
-      const filePath = await uploadFile(itemId);
-      if (filePath) {
+    await track(async () => {
+      if (editingId) {
         await (supabase.from("passif_items") as any)
-          .update({ justificatif_url: filePath })
-          .eq("id", itemId);
+          .update(payload)
+          .eq("id", editingId);
+      } else {
+        const { data } = await (supabase.from("passif_items") as any)
+          .insert(payload)
+          .select("id")
+          .single();
+        if (data) itemId = data.id;
       }
-    }
+
+      // Upload justificatif if provided
+      if (file && itemId) {
+        const filePath = await uploadFile(itemId);
+        if (filePath) {
+          await (supabase.from("passif_items") as any)
+            .update({ justificatif_url: filePath })
+            .eq("id", itemId);
+        }
+      }
+    });
 
     await loadItems(declarationId);
     setSaving(false);
@@ -233,7 +236,7 @@ const Etape4Passif = () => {
 
   const deleteItem = async (id: string) => {
     if (!declarationId) return;
-    await supabase.from("passif_items").delete().eq("id", id);
+    await track(() => supabase.from("passif_items").delete().eq("id", id) as any);
     await loadItems(declarationId);
   };
 
@@ -248,6 +251,7 @@ const Etape4Passif = () => {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
+      <SaveIndicator status={saveStatus} />
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
