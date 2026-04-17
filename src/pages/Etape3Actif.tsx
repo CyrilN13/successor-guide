@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -160,6 +161,120 @@ function RenderAlerts({
 }
 
 // ═══════════════════════════════════════════════════════
+// Sub-component: dialog form (own useForm scoped to type)
+// ═══════════════════════════════════════════════════════
+interface AssetDialogFormProps {
+  type: AssetTypeKey;
+  editingId: string | null;
+  initialItem: ActifItem | null;
+  onCancel: () => void;
+  onSubmit: (values: Record<string, any>) => Promise<void>;
+}
+
+function AssetDialogForm({
+  type,
+  editingId,
+  initialItem,
+  onCancel,
+  onSubmit,
+}: AssetDialogFormProps) {
+  const config = ASSET_CONFIGS[type];
+  const schema = buildSchema(config);
+  const [submitting, setSubmitting] = useState(false);
+
+  const computeDefaults = (): Record<string, any> => {
+    const defaults: Record<string, any> = Object.fromEntries(
+      config.fields.map((f) => [f.name, ""]),
+    );
+    if (initialItem) {
+      const details = initialItem.details ?? {};
+      for (const f of config.fields) {
+        if (f.name === "libelle") defaults[f.name] = initialItem.libelle ?? "";
+        else if (f.name === config.valeurField)
+          defaults[f.name] =
+            initialItem.valeur_estimee !== null && initialItem.valeur_estimee !== undefined
+              ? String(initialItem.valeur_estimee)
+              : "";
+        else defaults[f.name] = details[f.name] ?? "";
+      }
+    } else if (type === "immobilier") {
+      defaults.quote_part = "100";
+    }
+    return defaults;
+  };
+
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: computeDefaults(),
+  });
+
+  const watchedValues = form.watch();
+
+  const handleValid = async (values: Record<string, any>) => {
+    setSubmitting(true);
+    try {
+      await onSubmit(values);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleInvalid = (errors: any) => {
+    const fieldNames = Object.keys(errors);
+    const firstLabel =
+      config.fields.find((f) => f.name === fieldNames[0])?.label ?? fieldNames[0];
+    toast.error(
+      fieldNames.length === 1
+        ? `Champ requis ou invalide : ${firstLabel}`
+        : `Veuillez corriger ${fieldNames.length} champs (${firstLabel}…)`,
+    );
+  };
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(handleValid, handleInvalid)}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
+      >
+        {config.fields
+          .filter((f) => f.type !== "file")
+          .map((f) => (
+            <div
+              key={f.name}
+              className={f.colSpan === 2 || f.type === "radio" ? "col-span-full" : ""}
+            >
+              <RenderField field={f} control={form.control} />
+            </div>
+          ))}
+
+        {config.alerts && (
+          <div className="col-span-full space-y-2">
+            <RenderAlerts alerts={config.alerts} values={watchedValues} />
+          </div>
+        )}
+
+        <div className="col-span-full flex justify-end gap-3 pt-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Annuler
+          </Button>
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="bg-accent text-accent-foreground hover:bg-accent/90"
+          >
+            {submitting
+              ? "Enregistrement…"
+              : editingId
+              ? "Modifier"
+              : "Ajouter"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // Main page
 // ═══════════════════════════════════════════════════════
 const Etape3Actif = () => {
@@ -168,26 +283,20 @@ const Etape3Actif = () => {
   const [items, setItems] = useState<ActifItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<ActifItem | null>(null);
   const [activeType, setActiveType] = useState<AssetTypeKey>("compte_bancaire");
   const [openCategories, setOpenCategories] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
   const { status: saveStatus, track } = useSaveStatus();
 
-  const config = ASSET_CONFIGS[activeType];
-  const schema = buildSchema(config);
-
-  const form = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: Object.fromEntries(config.fields.map((f) => [f.name, ""])),
-  });
-
-  const watchedValues = form.watch();
-
   const loadItems = useCallback(async (declId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("actif_items")
       .select("*")
       .eq("declaration_id", declId);
+    if (error) {
+      toast.error("Erreur de chargement : " + error.message);
+      return;
+    }
     if (data) setItems(data as unknown as ActifItem[]);
   }, []);
 
@@ -218,10 +327,7 @@ const Etape3Actif = () => {
   const openAdd = (type: AssetTypeKey) => {
     setActiveType(type);
     setEditingId(null);
-    const cfg = ASSET_CONFIGS[type];
-    const defaults = Object.fromEntries(cfg.fields.map((f) => [f.name, ""]));
-    if (type === "immobilier") defaults.quote_part = "100";
-    form.reset(defaults);
+    setEditingItem(null);
     setDialogOpen(true);
   };
 
@@ -229,60 +335,71 @@ const Etape3Actif = () => {
     const type = item.type_bien as AssetTypeKey;
     setActiveType(type);
     setEditingId(item.id);
-    const cfg = ASSET_CONFIGS[type];
-    const details = item.details ?? {};
-    const values: Record<string, any> = {};
-    for (const f of cfg.fields) {
-      if (f.name === "libelle") values[f.name] = item.libelle ?? "";
-      else if (f.name === cfg.valeurField)
-        values[f.name] = item.valeur_estimee ?? "";
-      else values[f.name] = details[f.name] ?? "";
-    }
-    form.reset(values);
+    setEditingItem(item);
     setDialogOpen(true);
   };
 
-  const onSubmit = async (values: Record<string, any>) => {
-    if (!declarationId) return;
-    setSaving(true);
+  const handleSubmit = async (values: Record<string, any>) => {
+    if (!declarationId) {
+      toast.error("Déclaration introuvable. Recharge la page.");
+      return;
+    }
 
     const cfg = ASSET_CONFIGS[activeType];
     const valeur = Number(values[cfg.valeurField]) || 0;
     const details: Record<string, any> = {};
     for (const f of cfg.fields) {
       if (f.name !== "libelle" && f.name !== cfg.valeurField) {
-        details[f.name] = values[f.name];
+        const v = values[f.name];
+        details[f.name] = v === "" || v === undefined ? null : v;
       }
     }
 
     const payload = {
       declaration_id: declarationId,
       type_bien: activeType,
-      libelle: values.libelle as string,
+      libelle: (values.libelle as string) ?? null,
       valeur_estimee: valeur,
       details,
     };
 
+    let saveError: { message: string } | null = null;
     await track(async () => {
       if (editingId) {
-        await (supabase.from("actif_items") as any).update(payload).eq("id", editingId);
+        const { error } = await (supabase.from("actif_items") as any)
+          .update(payload)
+          .eq("id", editingId);
+        saveError = error;
       } else {
-        await (supabase.from("actif_items") as any).insert(payload);
+        const { error } = await (supabase.from("actif_items") as any).insert(payload);
+        saveError = error;
       }
     });
 
+    if (saveError) {
+      toast.error("Erreur lors de l'enregistrement : " + saveError.message);
+      return;
+    }
+
+    toast.success(editingId ? "Élément modifié" : "Élément ajouté");
     await loadItems(declarationId);
-    // Make sure the accordion section of the just-added/edited type stays open
     setOpenCategories((prev) =>
       prev.includes(activeType) ? prev : [...prev, activeType],
     );
-    setSaving(false);
     setDialogOpen(false);
   };
 
   const deleteItem = async (id: string) => {
     if (!declarationId) return;
-    await track(() => supabase.from("actif_items").delete().eq("id", id) as any);
+    let delError: { message: string } | null = null;
+    await track(async () => {
+      const { error } = await supabase.from("actif_items").delete().eq("id", id);
+      delError = error;
+    });
+    if (delError) {
+      toast.error("Erreur de suppression : " + delError.message);
+      return;
+    }
     await loadItems(declarationId);
   };
 
@@ -435,48 +552,16 @@ const Etape3Actif = () => {
             </DialogTitle>
           </DialogHeader>
 
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
-            >
-              {config.fields
-                .filter((f) => f.type !== "file")
-                .map((f) => (
-                  <div key={f.name} className={f.colSpan === 2 || f.type === "radio" ? "col-span-full" : ""}>
-                    <RenderField field={f} control={form.control} />
-                  </div>
-                ))}
-
-              {/* Dynamic alerts */}
-              {config.alerts && (
-                <div className="col-span-full space-y-2">
-                  <RenderAlerts alerts={config.alerts} values={watchedValues} />
-                </div>
-              )}
-
-              <div className="col-span-full flex justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-accent text-accent-foreground hover:bg-accent/90"
-                >
-                  {saving
-                    ? "Enregistrement…"
-                    : editingId
-                    ? "Modifier"
-                    : "Ajouter"}
-                </Button>
-              </div>
-            </form>
-          </Form>
+          {dialogOpen && (
+            <AssetDialogForm
+              key={`${activeType}-${editingId ?? "new"}`}
+              type={activeType}
+              editingId={editingId}
+              initialItem={editingItem}
+              onCancel={() => setDialogOpen(false)}
+              onSubmit={handleSubmit}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
