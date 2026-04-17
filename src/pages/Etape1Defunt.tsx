@@ -126,7 +126,12 @@ const Etape1Defunt = () => {
   });
 
   const watched = form.watch();
-  const debouncedValues = useDebounce(watched, 800);
+  // Stringify so useDebounce sees a stable primitive — avoids infinite loop
+  // (form.watch() returns a new object reference on every render).
+  const watchedKey = JSON.stringify(watched, (_k, v) =>
+    v instanceof Date ? v.toISOString() : v
+  );
+  const debouncedKey = useDebounce(watchedKey, 800);
 
   const situationMatrimoniale = form.watch("situation_matrimoniale");
   const showRegime = situationMatrimoniale === "Marié(e)";
@@ -216,12 +221,14 @@ const Etape1Defunt = () => {
     savedTimer.current = window.setTimeout(() => setSaveStatus("idle"), 1500);
   }, [declarationId, showRegime]);
 
-  // Trigger autosave whenever debounced values change (after initial load)
+  // Trigger autosave whenever the *serialized* values actually change
+  // (after initial load). Using the string key prevents the object-identity
+  // loop that made the indicator flash "Sauvegarde…" forever.
   useEffect(() => {
     if (!declarationId || !initialLoadDone.current) return;
-    autoSave(debouncedValues as DefuntFormValues);
+    autoSave(form.getValues());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedValues, declarationId]);
+  }, [debouncedKey, declarationId]);
 
   const onSubmit = async (values: DefuntFormValues) => {
     if (!declarationId) return;
@@ -235,6 +242,12 @@ const Etape1Defunt = () => {
 
     setSaving(false);
     navigate("/etape/2");
+  };
+
+  const onInvalid = () => {
+    // Scroll to first error so the user understands why nothing happened
+    const firstError = document.querySelector('[aria-invalid="true"]');
+    firstError?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   // No-op kept for compatibility with existing onBlur handlers — autosave is now reactive via useDebounce
@@ -262,7 +275,7 @@ const Etape1Defunt = () => {
       </p>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
           {/* État civil */}
           <Card>
             <CardContent className="p-6 space-y-4">
