@@ -89,6 +89,7 @@ const Etape2Heritiers = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { status: saveStatus, track } = useSaveStatus();
 
   const form = useForm<HeritierFormValues>({
     resolver: zodResolver(heritierSchema),
@@ -175,11 +176,13 @@ const Etape2Heritiers = () => {
       email_notification: values.email_notification || null,
     };
 
-    if (editingId) {
-      await supabase.from("heritiers").update(payload).eq("id", editingId);
-    } else {
-      await supabase.from("heritiers").insert(payload);
-    }
+    await track(async () => {
+      if (editingId) {
+        await supabase.from("heritiers").update(payload).eq("id", editingId);
+      } else {
+        await supabase.from("heritiers").insert(payload);
+      }
+    });
 
     await loadHeritiers(declarationId);
     setSaving(false);
@@ -188,7 +191,7 @@ const Etape2Heritiers = () => {
 
   const deleteHeritier = async (id: string) => {
     if (!declarationId) return;
-    await supabase.from("heritiers").delete().eq("id", id);
+    await track(() => supabase.from("heritiers").delete().eq("id", id) as any);
     await loadHeritiers(declarationId);
   };
 
@@ -209,6 +212,7 @@ const Etape2Heritiers = () => {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
+      <SaveIndicator status={saveStatus} />
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
