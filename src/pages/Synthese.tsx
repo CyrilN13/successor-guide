@@ -803,18 +803,32 @@ const Synthese = () => {
             Téléchargements
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Button
-              onClick={() => handleExport("recap")}
-              disabled={!!exporting}
-              className="justify-start"
+            <PDFDownloadLink
+              document={
+                <RecapPDFDocument
+                  data={{
+                    defunt: defunt as any,
+                    heritiers: heritiers as any,
+                    actifs: actifs as any,
+                    passifs: passifs as any,
+                    donations: donations as any,
+                  }}
+                />
+              }
+              fileName="Recap-Deesse.pdf"
+              style={{ textDecoration: "none" }}
             >
-              {exporting === "recap" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown className="h-4 w-4" />
+              {({ loading }) => (
+                <Button disabled={loading || !!exporting} className="w-full justify-start">
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4" />
+                  )}
+                  Récapitulatif PDF (brouillon)
+                </Button>
               )}
-              Récapitulatif PDF (brouillon)
-            </Button>
+            </PDFDownloadLink>
             <Button
               onClick={() => handleCerfaDownload("principal")}
               disabled={!!exporting}
