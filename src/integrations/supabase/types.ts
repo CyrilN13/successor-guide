@@ -426,7 +426,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      attach_declaration: { Args: { token: string }; Returns: string }
+      create_anonymous_declaration: {
+        Args: { mode_choice: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
