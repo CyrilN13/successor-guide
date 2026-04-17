@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { Info } from "lucide-react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
@@ -215,7 +216,13 @@ const Etape1Defunt = () => {
     };
 
     setSaveStatus("saving");
-    await (supabase.from("defunts") as any).upsert(payload, { onConflict: "declaration_id" });
+    const { error } = await (supabase.from("defunts") as any).upsert(payload, { onConflict: "declaration_id" });
+    if (error) {
+      console.error("Erreur autosave défunt:", error);
+      setSaveStatus("idle");
+      toast.error("Échec de l'enregistrement : " + error.message);
+      return;
+    }
     setSaveStatus("saved");
     if (savedTimer.current) window.clearTimeout(savedTimer.current);
     savedTimer.current = window.setTimeout(() => setSaveStatus("idle"), 1500);

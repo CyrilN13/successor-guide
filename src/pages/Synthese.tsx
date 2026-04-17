@@ -97,7 +97,26 @@ const Synthese = () => {
   // ─── Load all data ───
   useEffect(() => {
     (async () => {
-      const declId = localStorage.getItem("deesse_declaration_id");
+      let declId = localStorage.getItem("deesse_declaration_id");
+
+      // Fallback: derive declaration id from anonymous token (the actual key written by the rest of the app)
+      if (!declId) {
+        const token = localStorage.getItem("deesse_token");
+        if (token) {
+          const { data: decl } = await supabase
+            .from("declarations")
+            .select("id")
+            .eq("anonymous_token", token)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (decl?.id) {
+            declId = decl.id;
+            localStorage.setItem("deesse_declaration_id", declId);
+          }
+        }
+      }
+
       if (!declId) {
         navigate("/etape/1");
         return;
@@ -247,7 +266,7 @@ const Synthese = () => {
       updatePayload.purge_scheduled_at = purgeDate.toISOString();
     }
 
-    await supabase.from("declarations").update(updatePayload).eq("id", declarationId);
+    await (supabase.from("declarations") as any).update(updatePayload).eq("id", declarationId);
 
     setExported(true);
   }, [
