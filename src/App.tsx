@@ -34,6 +34,7 @@ const App = () => (
             <Route path="/etape/2" element={<Etape2Heritiers />} />
             <Route path="/etape/3" element={<Etape3Actif />} />
             <Route path="/etape/4" element={<Etape4Passif />} />
+            <Route path="/etape/6" element={<Synthese />} />
             <Route path="/etape/:numero" element={<Etape />} />
             <Route path="/synthese" element={<Synthese />} />
             <Route path="/connexion" element={<Connexion />} />
