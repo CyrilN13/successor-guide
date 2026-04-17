@@ -275,7 +275,7 @@ const Etape1Defunt = () => {
       </p>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-6">
           {/* État civil */}
           <Card>
             <CardContent className="p-6 space-y-4">
