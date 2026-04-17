@@ -814,7 +814,7 @@ const Synthese = () => {
               Récapitulatif PDF (brouillon)
             </Button>
             <Button
-              onClick={() => handleExport("cerfa")}
+              onClick={() => handleCerfaDownload("principal")}
               disabled={!!exporting}
               variant="secondary"
               className="justify-start"
@@ -824,7 +824,7 @@ const Synthese = () => {
               ) : (
                 <FileText className="h-4 w-4" />
               )}
-              CERFA 2705-SD pré-rempli
+              Télécharger le CERFA 2705-SD
             </Button>
             <Button
               onClick={() => handleExport("checklist")}
