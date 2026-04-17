@@ -237,8 +237,12 @@ const Etape1Defunt = () => {
     navigate("/etape/2");
   };
 
+  // No-op kept for compatibility with existing onBlur handlers — autosave is now reactive via useDebounce
+  const handleFieldBlur = useCallback(() => {}, []);
+
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
+      <SaveIndicator status={saveStatus} />
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
