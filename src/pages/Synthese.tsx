@@ -266,7 +266,7 @@ const Synthese = () => {
     const kind = type === "principal" ? "cerfa" : "cerfa-av";
     setExporting(kind);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-cerfa", {
+      const { data, error } = await supabase.functions.invoke("generate_cerfa", {
         body: { declarationId, type },
       });
       if (error) throw error;
