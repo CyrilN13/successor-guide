@@ -169,6 +169,7 @@ const Etape3Actif = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeType, setActiveType] = useState<AssetTypeKey>("compte_bancaire");
+  const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const { status: saveStatus, track } = useSaveStatus();
 
@@ -271,6 +272,10 @@ const Etape3Actif = () => {
     });
 
     await loadItems(declarationId);
+    // Make sure the accordion section of the just-added/edited type stays open
+    setOpenCategories((prev) =>
+      prev.includes(activeType) ? prev : [...prev, activeType],
+    );
     setSaving(false);
     setDialogOpen(false);
   };
@@ -322,7 +327,12 @@ const Etape3Actif = () => {
       </Card>
 
       {/* Accordion sections */}
-      <Accordion type="multiple" className="space-y-2 mb-8">
+      <Accordion
+        type="multiple"
+        value={openCategories}
+        onValueChange={setOpenCategories}
+        className="space-y-2 mb-8"
+      >
         {ASSET_TYPES.map(({ key, label }) => {
           const typeItems = itemsByType(key);
           const typeTotal = typeItems.reduce(
