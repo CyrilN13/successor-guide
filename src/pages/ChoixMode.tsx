@@ -48,7 +48,7 @@ const ChoixMode = () => {
       }
     }
 
-    navigate("/diagnostic");
+    navigate(mode === "ia" ? "/mode-ia/upload" : "/diagnostic");
   };
 
   return (

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import ChoixMode from "./pages/ChoixMode";
+import ModeIaUpload from "./pages/ModeIaUpload";
 import Diagnostic from "./pages/Diagnostic";
 import Etape1Defunt from "./pages/Etape1Defunt";
 import Etape2Heritiers from "./pages/Etape2Heritiers";
@@ -30,6 +31,7 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/choix-mode" element={<ChoixMode />} />
+            <Route path="/mode-ia/upload" element={<ModeIaUpload />} />
             <Route path="/diagnostic" element={<Diagnostic />} />
             <Route path="/etape/1" element={<Etape1Defunt />} />
             <Route path="/etape/2" element={<Etape2Heritiers />} />
