@@ -7,6 +7,7 @@ import Layout from "./components/Layout";
 import Index from "./pages/Index";
 import ChoixMode from "./pages/ChoixMode";
 import ModeIaUpload from "./pages/ModeIaUpload";
+import ModeIaRevision from "./pages/ModeIaRevision";
 import Diagnostic from "./pages/Diagnostic";
 import Etape1Defunt from "./pages/Etape1Defunt";
 import Etape2Heritiers from "./pages/Etape2Heritiers";
