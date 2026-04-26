@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Sparkles,
+  FileText,
+  CheckCircle2,
+  ArrowRight,
+  Loader2,
+  AlertTriangle,
+  PencilLine,
+  EyeOff,
+} from "lucide-react";
 import { Sparkles, FileText, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
