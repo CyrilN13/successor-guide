@@ -58,7 +58,7 @@ const ModeIaSourcePreview = () => {
       );
       const { data: signed } = await supabase.storage
         .from("uploads")
-        .createSignedUrl(doc.storage_path, 60 * 30);
+        .createSignedUrl(doc.storage_path, 300);
       if (cancelled) return;
       setUrl(signed?.signedUrl ?? null);
       setLoading(false);
