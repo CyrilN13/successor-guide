@@ -533,6 +533,7 @@ const ModeIaRevision = () => {
         </div>
       )}
 
+      <Tabs defaultValue="defunt" className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full mb-6 h-auto">
           <TabsTrigger value="defunt">Défunt</TabsTrigger>
           <TabsTrigger value="heritiers">Héritiers</TabsTrigger>
