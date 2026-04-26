@@ -425,6 +425,16 @@ const ModeIaRevision = () => {
   };
 
   const handleContinue = async () => {
+    if (declarationId) {
+      // Fire-and-forget purge of raw documents (we don't block the user)
+      supabase.functions
+        .invoke("purge-raw-document", {
+          body: { declarationId },
+        })
+        .catch((err) => {
+          console.error("purge-raw-document failed", err);
+        });
+    }
     navigate("/etape/6");
   };
 
