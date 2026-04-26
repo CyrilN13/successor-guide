@@ -39,7 +39,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DEPARTEMENTS_FR } from "@/lib/departements";
+import { DEPARTEMENTS } from "@/lib/departements";
 
 const NATIONALITES = [
   "Française",
@@ -536,9 +536,9 @@ const Etape1Defunt = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="max-h-72">
-                          {DEPARTEMENTS_FR.map((d) => (
+                          {DEPARTEMENTS.map((d) => (
                             <SelectItem key={d.code} value={d.code}>
-                              {d.code} — {d.name}
+                              {d.code} — {d.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
