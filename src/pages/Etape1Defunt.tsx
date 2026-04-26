@@ -39,7 +39,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { DEPARTEMENTS_FR } from "@/lib/departements";
+import { DEPARTEMENTS } from "@/lib/departements";
 
 const NATIONALITES = [
   "Française",
