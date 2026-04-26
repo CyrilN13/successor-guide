@@ -191,12 +191,17 @@ const ModeIaRevision = () => {
       }
       setDeclarationId(decl.id);
 
-      const [d, h, a, pa, do_] = await Promise.all([
+      const [d, h, a, pa, do_, ud] = await Promise.all([
         supabase.from("defunts").select("*").eq("declaration_id", decl.id).maybeSingle(),
         supabase.from("heritiers").select("*").eq("declaration_id", decl.id).order("ordre", { ascending: true }),
         supabase.from("actif_items").select("*").eq("declaration_id", decl.id),
         supabase.from("passif_items").select("*").eq("declaration_id", decl.id),
         supabase.from("donations").select("*").eq("declaration_id", decl.id),
+        supabase
+          .from("uploaded_documents")
+          .select("id, doc_type, detected_type, extraction_status, storage_path")
+          .eq("declaration_id", decl.id)
+          .is("deleted_at", null),
       ]);
 
       setDefunt(
@@ -213,6 +218,17 @@ const ModeIaRevision = () => {
       setActifs((a.data ?? []) as ItemRow[]);
       setPassifs((pa.data ?? []) as ItemRow[]);
       setDonations((do_.data ?? []) as unknown as ItemRow[]);
+      setDocs(
+        (ud.data ?? []).map((x: any) => ({
+          id: x.id,
+          doc_type: x.doc_type,
+          detected_type: x.detected_type,
+          extraction_status: x.extraction_status ?? "pending",
+          storage_path: x.storage_path,
+          fileName:
+            x.storage_path?.split("/").pop()?.replace(/^[^_]+_/, "") ?? "Document",
+        })),
+      );
       setLoading(false);
     };
     init();
