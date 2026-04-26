@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/choix-mode" element={<ChoixMode />} />
             <Route path="/mode-ia/upload" element={<ModeIaUpload />} />
+            <Route path="/mode-ia/revision" element={<ModeIaRevision />} />
             <Route path="/diagnostic" element={<Diagnostic />} />
             <Route path="/etape/1" element={<Etape1Defunt />} />
             <Route path="/etape/2" element={<Etape2Heritiers />} />
