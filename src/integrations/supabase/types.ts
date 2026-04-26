@@ -187,6 +187,7 @@ export type Database = {
           marital_status: string | null
           matrimonial_regime: string | null
           nationality: string | null
+          pre_rempli_fields: Json
         }
         Insert: {
           birth_date?: string | null
@@ -200,6 +201,7 @@ export type Database = {
           marital_status?: string | null
           matrimonial_regime?: string | null
           nationality?: string | null
+          pre_rempli_fields?: Json
         }
         Update: {
           birth_date?: string | null
@@ -213,6 +215,7 @@ export type Database = {
           marital_status?: string | null
           matrimonial_regime?: string | null
           nationality?: string | null
+          pre_rempli_fields?: Json
         }
         Relationships: [
           {
@@ -277,6 +280,7 @@ export type Database = {
           id: string
           lien_parente: string | null
           ordre: number | null
+          pre_rempli_fields: Json
           status: string | null
         }
         Insert: {
@@ -287,6 +291,7 @@ export type Database = {
           id?: string
           lien_parente?: string | null
           ordre?: number | null
+          pre_rempli_fields?: Json
           status?: string | null
         }
         Update: {
@@ -297,6 +302,7 @@ export type Database = {
           id?: string
           lien_parente?: string | null
           ordre?: number | null
+          pre_rempli_fields?: Json
           status?: string | null
         }
         Relationships: [
