@@ -285,38 +285,63 @@ const ModeIaUpload = () => {
     }
     setIsAnalyzing(true);
 
-    // Marque tous en "processing"
+    // Marque tous en "processing" (UI immédiat)
     const ids = pending.map((d) => d.id);
-    await supabase
-      .from("uploaded_documents")
-      .update({ extraction_status: "processing" })
-      .in("id", ids);
     setDocs((prev) =>
       prev.map((d) =>
         ids.includes(d.id) ? { ...d, extraction_status: "processing" } : d,
       ),
     );
 
-    // Simulation locale d'extraction (l'edge function réelle viendra ensuite)
-    await new Promise((r) => setTimeout(r, 1500));
+    let successCount = 0;
+    let failCount = 0;
 
-    await supabase
-      .from("uploaded_documents")
-      .update({ extraction_status: "done" })
-      .in("id", ids);
-    setDocs((prev) =>
-      prev.map((d) =>
-        ids.includes(d.id) ? { ...d, extraction_status: "done" } : d,
-      ),
-    );
+    for (const doc of pending) {
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          "extract-document",
+          { body: { uploadedDocumentId: doc.id } },
+        );
+        if (error) throw error;
+        if (data && (data as any).error) throw new Error((data as any).error);
+
+        successCount++;
+        setDocs((prev) =>
+          prev.map((d) =>
+            d.id === doc.id ? { ...d, extraction_status: "done" } : d,
+          ),
+        );
+      } catch (err: any) {
+        failCount++;
+        console.error("Extraction failed for", doc.id, err);
+        setDocs((prev) =>
+          prev.map((d) =>
+            d.id === doc.id ? { ...d, extraction_status: "failed" } : d,
+          ),
+        );
+        toast({
+          title: `Échec : ${doc.fileName ?? "document"}`,
+          description: err?.message ?? "Erreur lors de l'extraction.",
+          variant: "destructive",
+        });
+      }
+    }
 
     setIsAnalyzing(false);
 
-    toast({
-      title: "Analyse terminée",
-      description: `${ids.length} document(s) prêt(s) à réviser.`,
-    });
-    navigate("/mode-ia/revision");
+    if (successCount > 0) {
+      toast({
+        title: "Analyse terminée",
+        description: `${successCount} document(s) extrait(s)${failCount ? `, ${failCount} échec(s)` : ""}.`,
+      });
+      navigate("/mode-ia/revision");
+    } else {
+      toast({
+        title: "Aucune extraction réussie",
+        description: "Vérifiez vos documents et réessayez.",
+        variant: "destructive",
+      });
+    }
   };
 
   const hasDocs = docs.length > 0;
