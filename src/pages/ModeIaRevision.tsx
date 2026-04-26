@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import ModeIaSecurityNotice from "@/components/ModeIaSecurityNotice";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -255,7 +256,7 @@ const ModeIaRevision = () => {
     }
     const { data: signed } = await supabase.storage
       .from("uploads")
-      .createSignedUrl(doc.storage_path, 60 * 10);
+      .createSignedUrl(doc.storage_path, 300);
     setSourceDocUrl(signed?.signedUrl ?? null);
     setSourceDocLoading(false);
   };
@@ -461,6 +462,8 @@ const ModeIaRevision = () => {
       <p className="text-muted-foreground mb-6">
         Vous gardez la main sur chaque champ. Validez, modifiez ou complétez.
       </p>
+
+      <ModeIaSecurityNotice />
 
       {/* Recap docs */}
       {docs.length > 0 && (
