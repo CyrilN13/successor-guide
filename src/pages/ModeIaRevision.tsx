@@ -162,6 +162,17 @@ const ModeIaRevision = () => {
   const [sourceDocUrl, setSourceDocUrl] = useState<string | null>(null);
   const [sourceDocLoading, setSourceDocLoading] = useState(false);
 
+  const [docs, setDocs] = useState<
+    {
+      id: string;
+      doc_type: string | null;
+      detected_type: string | null;
+      extraction_status: string;
+      storage_path: string | null;
+      fileName: string;
+    }[]
+  >([]);
+
   useEffect(() => {
     const init = async () => {
       const token = localStorage.getItem("deesse_token");
