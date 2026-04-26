@@ -450,6 +450,7 @@ const ModeIaRevision = () => {
       </h1>
       <p className="text-muted-foreground mb-6">
         Vous gardez la main sur chaque champ. Validez, modifiez ou complétez.
+      </p>
 
       {/* Recap docs */}
       {docs.length > 0 && (
