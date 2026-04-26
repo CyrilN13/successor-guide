@@ -26,6 +26,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { applyExtractionToDeclaration } from "@/lib/mapping";
 
 const DOC_TYPES: { value: string; label: string }[] = [
   { value: "acte_deces", label: "Acte de décès" },
@@ -304,6 +305,25 @@ const ModeIaUpload = () => {
         );
         if (error) throw error;
         if (data && (data as any).error) throw new Error((data as any).error);
+
+        // Re-fetch the document to get the extraction_payload + final type
+        const { data: refreshed } = await supabase
+          .from("uploaded_documents")
+          .select("id, doc_type, detected_type, extraction_payload")
+          .eq("id", doc.id)
+          .maybeSingle();
+
+        if (refreshed && declarationId) {
+          try {
+            await applyExtractionToDeclaration(declarationId, {
+              id: refreshed.id,
+              doc_type: refreshed.doc_type ?? refreshed.detected_type ?? "autre",
+              extraction_payload: refreshed.extraction_payload,
+            });
+          } catch (mapErr) {
+            console.error("Mapping failed for", doc.id, mapErr);
+          }
+        }
 
         successCount++;
         setDocs((prev) =>
