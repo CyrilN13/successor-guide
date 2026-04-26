@@ -256,7 +256,7 @@ const ModeIaRevision = () => {
     }
     const { data: signed } = await supabase.storage
       .from("uploads")
-      .createSignedUrl(doc.storage_path, 60 * 10);
+      .createSignedUrl(doc.storage_path, 300);
     setSourceDocUrl(signed?.signedUrl ?? null);
     setSourceDocLoading(false);
   };
