@@ -37,7 +37,7 @@ type Heritier = {
 
 type ItemRow = {
   id: string;
-  libelle: string | null;
+  libelle?: string | null;
   valeur_estimee?: number | null;
   montant?: number | null;
   type_bien?: string | null;
