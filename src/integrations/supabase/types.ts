@@ -336,37 +336,73 @@ export type Database = {
       }
       heritiers: {
         Row: {
+          adresse_code_postal: string | null
+          adresse_pays: string | null
+          adresse_rue: string | null
+          adresse_ville: string | null
           birth_date: string | null
+          civilite: string | null
           declaration_id: string | null
           email_notification: string | null
+          est_declarant: boolean | null
           full_name: string | null
           id: string
           lien_parente: string | null
+          lieu_naissance: string | null
+          nom_naissance: string | null
+          nom_usage: string | null
           ordre: number | null
           pre_rempli_fields: Json
+          prenoms: string | null
+          profession: string | null
           status: string | null
+          telephone: string | null
         }
         Insert: {
+          adresse_code_postal?: string | null
+          adresse_pays?: string | null
+          adresse_rue?: string | null
+          adresse_ville?: string | null
           birth_date?: string | null
+          civilite?: string | null
           declaration_id?: string | null
           email_notification?: string | null
+          est_declarant?: boolean | null
           full_name?: string | null
           id?: string
           lien_parente?: string | null
+          lieu_naissance?: string | null
+          nom_naissance?: string | null
+          nom_usage?: string | null
           ordre?: number | null
           pre_rempli_fields?: Json
+          prenoms?: string | null
+          profession?: string | null
           status?: string | null
+          telephone?: string | null
         }
         Update: {
+          adresse_code_postal?: string | null
+          adresse_pays?: string | null
+          adresse_rue?: string | null
+          adresse_ville?: string | null
           birth_date?: string | null
+          civilite?: string | null
           declaration_id?: string | null
           email_notification?: string | null
+          est_declarant?: boolean | null
           full_name?: string | null
           id?: string
           lien_parente?: string | null
+          lieu_naissance?: string | null
+          nom_naissance?: string | null
+          nom_usage?: string | null
           ordre?: number | null
           pre_rempli_fields?: Json
+          prenoms?: string | null
+          profession?: string | null
           status?: string | null
+          telephone?: string | null
         }
         Relationships: [
           {
