@@ -9,16 +9,24 @@ export async function applyExtractionToDeclaration(
   if (!p) return
 
   switch (doc.doc_type) {
-    case 'acte_deces':
-      await supabase.from('defunts').upsert({
-        declaration_id: declarationId,
+    case 'acte_deces': {
+      const fields: Record<string, any> = {
         full_name: p.defunt?.full_name,
         birth_date: p.defunt?.birth_date,
         death_date: p.defunt?.death_date,
         death_place: p.defunt?.death_place,
         domicile: p.defunt?.domicile,
+      }
+      const filled = Object.entries(fields)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k]) => k)
+      await supabase.from('defunts').upsert({
+        declaration_id: declarationId,
+        ...fields,
+        pre_rempli_fields: filled,
       }, { onConflict: 'declaration_id' })
       break
+    }
 
     case 'releve_bancaire':
       await supabase.from('actif_items').insert({
