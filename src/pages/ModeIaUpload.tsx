@@ -26,6 +26,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { applyExtractionToDeclaration } from "@/lib/mapping";
 
 const DOC_TYPES: { value: string; label: string }[] = [
   { value: "acte_deces", label: "Acte de décès" },
