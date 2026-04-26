@@ -463,6 +463,8 @@ const ModeIaRevision = () => {
         Vous gardez la main sur chaque champ. Validez, modifiez ou complétez.
       </p>
 
+      <ModeIaSecurityNotice />
+
       {/* Recap docs */}
       {docs.length > 0 && (
         <Card className="mb-4">
