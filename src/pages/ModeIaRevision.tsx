@@ -191,7 +191,7 @@ const ModeIaRevision = () => {
       );
       setActifs((a.data ?? []) as ItemRow[]);
       setPassifs((pa.data ?? []) as ItemRow[]);
-      setDonations((do_.data ?? []) as ItemRow[]);
+      setDonations((do_.data ?? []) as unknown as ItemRow[]);
       setLoading(false);
     };
     init();
