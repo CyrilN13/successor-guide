@@ -381,17 +381,8 @@ const ModeIaUpload = () => {
         Notre IA pré-remplit votre déclaration à partir de vos justificatifs.
       </p>
 
-      {/* Rappel sécurité */}
-      <Card className="mb-6 border-accent/40 bg-accent/5">
-        <CardContent className="p-4 flex gap-3">
-          <ShieldCheck className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-          <p className="text-sm text-foreground/80 leading-relaxed">
-            Vos documents sont chiffrés au stockage. Les fichiers bruts seront
-            automatiquement supprimés après extraction — seules les données
-            structurées que vous aurez validées seront conservées.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Rappel sécurité (B6.4) */}
+      <ModeIaSecurityNotice />
 
       {/* Dropzone */}
       <div
