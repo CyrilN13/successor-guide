@@ -384,6 +384,46 @@ const ModeIaRevision = () => {
     missing: rows.filter((r) => !r.libelle).length,
   });
 
+
+  // ---------- Failed documents ----------
+  const DOC_TYPE_TO_STEP: Record<string, string> = {
+    acte_deces: "/etape/1",
+    livret_famille: "/etape/2",
+    releve_bancaire: "/etape/3",
+    titre_propriete: "/etape/3",
+    assurance_vie: "/etape/3",
+    releve_portefeuille: "/etape/3",
+    justificatif_dette: "/etape/4",
+    acte_donation: "/etape/5",
+  };
+
+  const successDocs = docs.filter((d) => d.extraction_status === "done");
+  const failedDocs = docs.filter((d) => d.extraction_status === "failed");
+
+  const handleManualEntry = (doc: (typeof docs)[number]) => {
+    const type = doc.doc_type ?? doc.detected_type ?? "autre";
+    const route = DOC_TYPE_TO_STEP[type] ?? "/etape/1";
+    sessionStorage.setItem("mode_ia_preview_doc_id", doc.id);
+    navigate(route);
+  };
+
+  const handleIgnoreDoc = async (doc: (typeof docs)[number]) => {
+    const { error } = await supabase
+      .from("uploaded_documents")
+      .update({ extraction_status: "manual_fallback" })
+      .eq("id", doc.id);
+    if (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ignorer ce document.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDocs((prev) => prev.filter((d) => d.id !== doc.id));
+    toast({ title: "Document ignoré", description: doc.fileName });
+  };
+
   const handleContinue = async () => {
     navigate("/etape/6");
   };
