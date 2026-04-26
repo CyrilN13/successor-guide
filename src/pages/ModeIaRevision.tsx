@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, FileText, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import {
+  Sparkles,
+  FileText,
+  CheckCircle2,
+  ArrowRight,
+  Loader2,
+  AlertTriangle,
+  PencilLine,
+  EyeOff,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -152,6 +162,17 @@ const ModeIaRevision = () => {
   const [sourceDocUrl, setSourceDocUrl] = useState<string | null>(null);
   const [sourceDocLoading, setSourceDocLoading] = useState(false);
 
+  const [docs, setDocs] = useState<
+    {
+      id: string;
+      doc_type: string | null;
+      detected_type: string | null;
+      extraction_status: string;
+      storage_path: string | null;
+      fileName: string;
+    }[]
+  >([]);
+
   useEffect(() => {
     const init = async () => {
       const token = localStorage.getItem("deesse_token");
@@ -170,12 +191,17 @@ const ModeIaRevision = () => {
       }
       setDeclarationId(decl.id);
 
-      const [d, h, a, pa, do_] = await Promise.all([
+      const [d, h, a, pa, do_, ud] = await Promise.all([
         supabase.from("defunts").select("*").eq("declaration_id", decl.id).maybeSingle(),
         supabase.from("heritiers").select("*").eq("declaration_id", decl.id).order("ordre", { ascending: true }),
         supabase.from("actif_items").select("*").eq("declaration_id", decl.id),
         supabase.from("passif_items").select("*").eq("declaration_id", decl.id),
         supabase.from("donations").select("*").eq("declaration_id", decl.id),
+        supabase
+          .from("uploaded_documents")
+          .select("id, doc_type, detected_type, extraction_status, storage_path")
+          .eq("declaration_id", decl.id)
+          .is("deleted_at", null),
       ]);
 
       setDefunt(
@@ -192,6 +218,17 @@ const ModeIaRevision = () => {
       setActifs((a.data ?? []) as ItemRow[]);
       setPassifs((pa.data ?? []) as ItemRow[]);
       setDonations((do_.data ?? []) as unknown as ItemRow[]);
+      setDocs(
+        (ud.data ?? []).map((x: any) => ({
+          id: x.id,
+          doc_type: x.doc_type,
+          detected_type: x.detected_type,
+          extraction_status: x.extraction_status ?? "pending",
+          storage_path: x.storage_path,
+          fileName:
+            x.storage_path?.split("/").pop()?.replace(/^[^_]+_/, "") ?? "Document",
+        })),
+      );
       setLoading(false);
     };
     init();
@@ -347,6 +384,46 @@ const ModeIaRevision = () => {
     missing: rows.filter((r) => !r.libelle).length,
   });
 
+
+  // ---------- Failed documents ----------
+  const DOC_TYPE_TO_STEP: Record<string, string> = {
+    acte_deces: "/etape/1",
+    livret_famille: "/etape/2",
+    releve_bancaire: "/etape/3",
+    titre_propriete: "/etape/3",
+    assurance_vie: "/etape/3",
+    releve_portefeuille: "/etape/3",
+    justificatif_dette: "/etape/4",
+    acte_donation: "/etape/5",
+  };
+
+  const successDocs = docs.filter((d) => d.extraction_status === "done");
+  const failedDocs = docs.filter((d) => d.extraction_status === "failed");
+
+  const handleManualEntry = (doc: (typeof docs)[number]) => {
+    const type = doc.doc_type ?? doc.detected_type ?? "autre";
+    const route = DOC_TYPE_TO_STEP[type] ?? "/etape/1";
+    sessionStorage.setItem("mode_ia_preview_doc_id", doc.id);
+    navigate(route);
+  };
+
+  const handleIgnoreDoc = async (doc: (typeof docs)[number]) => {
+    const { error } = await supabase
+      .from("uploaded_documents")
+      .update({ extraction_status: "manual_fallback" })
+      .eq("id", doc.id);
+    if (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ignorer ce document.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDocs((prev) => prev.filter((d) => d.id !== doc.id));
+    toast({ title: "Document ignoré", description: doc.fileName });
+  };
+
   const handleContinue = async () => {
     navigate("/etape/6");
   };
@@ -374,6 +451,87 @@ const ModeIaRevision = () => {
       <p className="text-muted-foreground mb-6">
         Vous gardez la main sur chaque champ. Validez, modifiez ou complétez.
       </p>
+
+      {/* Recap docs */}
+      {docs.length > 0 && (
+        <Card className="mb-4">
+          <CardContent className="p-4 flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              <span>
+                <strong>{successDocs.length}</strong> document
+                {successDocs.length > 1 ? "s" : ""} analysé
+                {successDocs.length > 1 ? "s" : ""} avec succès
+              </span>
+            </div>
+            {failedDocs.length > 0 && (
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="w-4 h-4" />
+                <span>
+                  <strong>{failedDocs.length}</strong> document
+                  {failedDocs.length > 1 ? "s" : ""} en échec — saisie manuelle
+                  nécessaire
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Failed documents cards */}
+      {failedDocs.length > 0 && (
+        <div className="space-y-3 mb-6">
+          {failedDocs.map((doc) => (
+            <Card
+              key={doc.id}
+              className="border-destructive/50 bg-destructive/5"
+            >
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">
+                      Nous n'avons pas pu extraire d'informations de ce document
+                      ({doc.fileName}).
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Vous pouvez : (a) remplacer par un document plus lisible,
+                      (b) saisir manuellement les informations correspondantes,
+                      (c) ignorer ce document.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 pl-8">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate("/mode-ia/upload")}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Remplacer le document
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleManualEntry(doc)}
+                  >
+                    <PencilLine className="w-3.5 h-3.5" />
+                    Saisir manuellement
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleIgnoreDoc(doc)}
+                  >
+                    <EyeOff className="w-3.5 h-3.5" />
+                    Ignorer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Tabs defaultValue="defunt" className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full mb-6 h-auto">
