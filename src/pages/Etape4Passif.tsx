@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, Upload, Info } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { DateInput } from "@/components/ui/date-input";
+import ModeIaSourcePreview from "@/components/ModeIaSourcePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -251,6 +252,7 @@ const Etape4Passif = () => {
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
+      <ModeIaSourcePreview />
       <SaveIndicator status={saveStatus} />
       {/* Progress */}
       <div className="mb-8">
