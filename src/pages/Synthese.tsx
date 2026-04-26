@@ -16,6 +16,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 
 import { supabase } from "@/integrations/supabase/client";
 import { RecapPDFDocument, useRecapData } from "@/components/RecapPDF";
+import ModeIaSourcePreview from "@/components/ModeIaSourcePreview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
