@@ -9,6 +9,7 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
+  PenLine,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -61,27 +64,69 @@ const STATUTS = [
 ];
 
 const heritierSchema = z.object({
-  full_name: z.string().trim().min(1, "Le nom est requis").max(100),
+  civilite: z.enum(["M.", "Mme"], { required_error: "La civilité est requise" }),
+  nom_naissance: z.string().trim().min(1, "Le nom de naissance est requis").max(100),
+  nom_usage: z.string().trim().max(100).optional().or(z.literal("")),
   prenoms: z.string().trim().min(1, "Les prénoms sont requis").max(200),
   birth_date: z.date({ required_error: "La date de naissance est requise" }),
+  lieu_naissance: z.string().trim().max(120).optional().or(z.literal("")),
+  adresse_rue: z.string().trim().max(200).optional().or(z.literal("")),
+  adresse_code_postal: z.string().trim().max(20).optional().or(z.literal("")),
+  adresse_ville: z.string().trim().max(100).optional().or(z.literal("")),
+  adresse_pays: z.string().trim().max(100).optional().or(z.literal("")),
+  profession: z.string().trim().max(100).optional().or(z.literal("")),
+  telephone: z.string().trim().max(40).optional().or(z.literal("")),
   lien_parente: z.string().min(1, "Le lien de parenté est requis"),
   ordre: z.coerce.number().int().positive().optional().or(z.literal("")),
   status: z.string().min(1, "Le statut est requis"),
   email_notification: z.string().email("Email invalide").optional().or(z.literal("")),
+  est_declarant: z.boolean().optional(),
 });
 
 type HeritierFormValues = z.infer<typeof heritierSchema>;
 
 interface Heritier {
   id: string;
-  full_name: string;
+  civilite: string | null;
+  nom_naissance: string | null;
+  nom_usage: string | null;
+  prenoms: string | null;
+  full_name: string | null;
   birth_date: string | null;
+  lieu_naissance: string | null;
+  adresse_rue: string | null;
+  adresse_code_postal: string | null;
+  adresse_ville: string | null;
+  adresse_pays: string | null;
+  profession: string | null;
+  telephone: string | null;
   lien_parente: string | null;
   ordre: number | null;
   status: string | null;
   email_notification: string | null;
+  est_declarant: boolean | null;
   declaration_id: string | null;
 }
+
+const defaultFormValues: HeritierFormValues = {
+  civilite: "M." as const,
+  nom_naissance: "",
+  nom_usage: "",
+  prenoms: "",
+  birth_date: undefined as unknown as Date,
+  lieu_naissance: "",
+  adresse_rue: "",
+  adresse_code_postal: "",
+  adresse_ville: "",
+  adresse_pays: "France",
+  profession: "",
+  telephone: "",
+  lien_parente: "",
+  ordre: "" as unknown as number,
+  status: "non_precise",
+  email_notification: "",
+  est_declarant: false,
+};
 
 const Etape2Heritiers = () => {
   const navigate = useNavigate();
@@ -90,18 +135,12 @@ const Etape2Heritiers = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showDeclarantWarning, setShowDeclarantWarning] = useState(false);
   const { status: saveStatus, track } = useSaveStatus();
 
   const form = useForm<HeritierFormValues>({
     resolver: zodResolver(heritierSchema),
-    defaultValues: {
-      full_name: "",
-      prenoms: "",
-      lien_parente: "",
-      ordre: "",
-      status: "non_precise",
-      email_notification: "",
-    },
+    defaultValues: defaultFormValues,
   });
 
   const loadHeritiers = useCallback(async (declId: string) => {
@@ -110,7 +149,7 @@ const Etape2Heritiers = () => {
       .select("*")
       .eq("declaration_id", declId)
       .order("ordre", { ascending: true, nullsFirst: false });
-    if (data) setHeritiers(data);
+    if (data) setHeritiers(data as unknown as Heritier[]);
   }, []);
 
   useEffect(() => {
@@ -134,31 +173,30 @@ const Etape2Heritiers = () => {
 
   const openAddDialog = () => {
     setEditingId(null);
-    form.reset({
-      full_name: "",
-      prenoms: "",
-      lien_parente: "",
-      ordre: "",
-      status: "non_precise",
-      email_notification: "",
-    });
+    form.reset(defaultFormValues);
     setDialogOpen(true);
   };
 
   const openEditDialog = (h: Heritier) => {
     setEditingId(h.id);
-    // Extract prenoms from details or split full_name
-    const parts = (h.full_name ?? "").split(" ");
-    const nom = parts[0] ?? "";
-    const prenoms = parts.slice(1).join(" ") ?? "";
     form.reset({
-      full_name: nom,
-      prenoms,
-      birth_date: h.birth_date ? new Date(h.birth_date) : undefined as any,
+      civilite: (h.civilite === "Mme" ? "Mme" : "M.") as "M." | "Mme",
+      nom_naissance: h.nom_naissance ?? "",
+      nom_usage: h.nom_usage ?? "",
+      prenoms: h.prenoms ?? "",
+      birth_date: h.birth_date ? new Date(h.birth_date) : (undefined as unknown as Date),
+      lieu_naissance: h.lieu_naissance ?? "",
+      adresse_rue: h.adresse_rue ?? "",
+      adresse_code_postal: h.adresse_code_postal ?? "",
+      adresse_ville: h.adresse_ville ?? "",
+      adresse_pays: h.adresse_pays ?? "France",
+      profession: h.profession ?? "",
+      telephone: h.telephone ?? "",
       lien_parente: h.lien_parente ?? "",
-      ordre: h.ordre ?? ("" as any),
+      ordre: (h.ordre ?? "") as unknown as number,
       status: h.status ?? "non_precise",
       email_notification: h.email_notification ?? "",
+      est_declarant: !!h.est_declarant,
     });
     setDialogOpen(true);
   };
@@ -167,21 +205,50 @@ const Etape2Heritiers = () => {
     if (!declarationId) return;
     setSaving(true);
 
+    const fullName = `${values.nom_naissance} ${values.prenoms}`.trim();
+
     const payload = {
       declaration_id: declarationId,
-      full_name: `${values.full_name} ${values.prenoms}`.trim(),
+      civilite: values.civilite,
+      nom_naissance: values.nom_naissance,
+      nom_usage: values.nom_usage || null,
+      prenoms: values.prenoms,
+      full_name: fullName,
       birth_date: values.birth_date ? format(values.birth_date, "yyyy-MM-dd") : null,
+      lieu_naissance: values.lieu_naissance || null,
+      adresse_rue: values.adresse_rue || null,
+      adresse_code_postal: values.adresse_code_postal || null,
+      adresse_ville: values.adresse_ville || null,
+      adresse_pays: values.adresse_pays || null,
+      profession: values.profession || null,
+      telephone: values.telephone || null,
       lien_parente: values.lien_parente,
       ordre: values.ordre ? Number(values.ordre) : null,
       status: values.status,
       email_notification: values.email_notification || null,
+      est_declarant: !!values.est_declarant,
     };
 
     await track(async () => {
+      let savedId = editingId;
       if (editingId) {
         await supabase.from("heritiers").update(payload).eq("id", editingId);
       } else {
-        await supabase.from("heritiers").insert(payload);
+        const { data: inserted } = await supabase
+          .from("heritiers")
+          .insert(payload)
+          .select("id")
+          .single();
+        savedId = inserted?.id ?? null;
+      }
+
+      // Enforce single declarant: uncheck others
+      if (values.est_declarant && savedId) {
+        await supabase
+          .from("heritiers")
+          .update({ est_declarant: false })
+          .eq("declaration_id", declarationId)
+          .neq("id", savedId);
       }
     });
 
@@ -198,6 +265,11 @@ const Etape2Heritiers = () => {
 
   const handleContinue = async () => {
     if (!declarationId) return;
+    const hasDeclarant = heritiers.some((h) => h.est_declarant);
+    if (!hasDeclarant && !showDeclarantWarning) {
+      setShowDeclarantWarning(true);
+      // Non-blocking: continue anyway after showing once
+    }
     await supabase
       .from("declarations")
       .update({ current_step: 2 })
@@ -210,6 +282,12 @@ const Etape2Heritiers = () => {
   const allRenounce =
     hasHeritiers && heritiers.every((h) => h.status === "renonce");
   const canContinue = hasHeritiers && !allRenounce;
+  const hasDeclarant = heritiers.some((h) => h.est_declarant);
+
+  const formatAdresse = (h: Heritier) => {
+    const parts = [h.adresse_rue, h.adresse_code_postal, h.adresse_ville].filter(Boolean);
+    return parts.join(", ");
+  };
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
@@ -246,43 +324,69 @@ const Etape2Heritiers = () => {
         </Alert>
       )}
 
+      {showDeclarantWarning && !hasDeclarant && (
+        <Alert className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Vous n'avez pas désigné l'héritier signataire de la DS. Le premier
+            héritier acceptant sera utilisé par défaut. Vous pourrez le modifier.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Heritiers list */}
       {heritiers.length > 0 ? (
         <div className="space-y-3 mb-6">
-          {heritiers.map((h) => (
-            <Card key={h.id}>
-              <CardContent className="p-4 flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{h.full_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {h.lien_parente}
-                    {h.birth_date &&
-                      ` · né(e) le ${format(new Date(h.birth_date), "dd/MM/yyyy")}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {STATUTS.find((s) => s.value === h.status)?.label ??
-                      h.status}
-                  </p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(h)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteHeritier(h.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {heritiers.map((h) => {
+            const adresse = formatAdresse(h);
+            return (
+              <Card key={h.id}>
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium truncate">{h.full_name}</p>
+                      {h.est_declarant && (
+                        <Badge variant="secondary" className="gap-1">
+                          <PenLine className="h-3 w-3" />
+                          Déclarant(e)
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {h.lien_parente}
+                      {h.birth_date &&
+                        ` · né(e) le ${format(new Date(h.birth_date), "dd/MM/yyyy")}`}
+                    </p>
+                    {adresse && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {adresse}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {STATUTS.find((s) => s.value === h.status)?.label ??
+                        h.status}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(h)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteHeritier(h.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card className="mb-6">
@@ -319,7 +423,7 @@ const Etape2Heritiers = () => {
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-heading">
               {editingId ? "Modifier l'héritier" : "Ajouter un héritier"}
@@ -333,17 +437,60 @@ const Etape2Heritiers = () => {
             >
               <FormField
                 control={form.control}
-                name="full_name"
+                name="civilite"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nom complet *</FormLabel>
+                    <FormLabel>Civilité *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Dupont" {...field} />
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex gap-6 mt-1"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="M." id="civ-m" />
+                          <Label htmlFor="civ-m" className="cursor-pointer">M.</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="Mme" id="civ-mme" />
+                          <Label htmlFor="civ-mme" className="cursor-pointer">Mme</Label>
+                        </div>
+                      </RadioGroup>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="nom_naissance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom de naissance *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Dupont" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="nom_usage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom d'usage</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(optionnel)" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -359,24 +506,128 @@ const Etape2Heritiers = () => {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="birth_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date de naissance *</FormLabel>
-                    <FormControl>
-                      <DateInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        max={new Date().toISOString().split("T")[0]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="birth_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date de naissance *</FormLabel>
+                      <FormControl>
+                        <DateInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          max={new Date().toISOString().split("T")[0]}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="lieu_naissance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lieu de naissance</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Paris (75)" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Adresse</p>
+                <FormField
+                  control={form.control}
+                  name="adresse_rue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rue</FormLabel>
+                      <FormControl>
+                        <Input placeholder="12 rue de la Paix" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="adresse_code_postal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code postal</FormLabel>
+                        <FormControl>
+                          <Input placeholder="75002" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="adresse_ville"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ville</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Paris" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="adresse_pays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pays</FormLabel>
+                        <FormControl>
+                          <Input placeholder="France" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="profession"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profession</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(optionnel)" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="telephone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="06 12 34 56 78" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -479,6 +730,30 @@ const Etape2Heritiers = () => {
                       une notification du dépôt final.
                     </p>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="est_declarant"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={!!field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="cursor-pointer">
+                        C'est cet héritier qui signera la déclaration
+                      </FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Un seul héritier peut être désigné signataire. Cocher
+                        ici décochera automatiquement les autres.
+                      </p>
+                    </div>
                   </FormItem>
                 )}
               />
