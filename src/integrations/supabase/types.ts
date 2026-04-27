@@ -176,109 +176,46 @@ export type Database = {
       }
       defunts: {
         Row: {
-          adresse_code_postal: string | null
-          adresse_pays: string | null
-          adresse_rue: string | null
-          adresse_ville: string | null
           birth_date: string | null
-          civilite: string | null
-          conjoint_civilite: string | null
-          conjoint_date_naissance: string | null
-          conjoint_lieu_naissance: string | null
-          conjoint_nom_naissance: string | null
-          conjoint_nom_usage: string | null
-          conjoint_prenoms: string | null
-          date_deces_conjoint: string | null
-          date_mariage: string | null
-          date_pacs: string | null
           death_date: string | null
           death_place: string | null
           declaration_id: string | null
-          departement_naissance: string | null
           details: Json | null
           domicile: string | null
           full_name: string | null
           id: string
-          lieu_mariage: string | null
           marital_status: string | null
           matrimonial_regime: string | null
           nationality: string | null
-          nom_naissance: string | null
-          nom_usage: string | null
-          pays_naissance: string | null
           pre_rempli_fields: Json
-          prenoms: string | null
-          profession: string | null
         }
         Insert: {
-          adresse_code_postal?: string | null
-          adresse_pays?: string | null
-          adresse_rue?: string | null
-          adresse_ville?: string | null
           birth_date?: string | null
-          civilite?: string | null
-          conjoint_civilite?: string | null
-          conjoint_date_naissance?: string | null
-          conjoint_lieu_naissance?: string | null
-          conjoint_nom_naissance?: string | null
-          conjoint_nom_usage?: string | null
-          conjoint_prenoms?: string | null
-          date_deces_conjoint?: string | null
-          date_mariage?: string | null
-          date_pacs?: string | null
           death_date?: string | null
           death_place?: string | null
           declaration_id?: string | null
-          departement_naissance?: string | null
           details?: Json | null
           domicile?: string | null
           full_name?: string | null
           id?: string
-          lieu_mariage?: string | null
           marital_status?: string | null
           matrimonial_regime?: string | null
           nationality?: string | null
-          nom_naissance?: string | null
-          nom_usage?: string | null
-          pays_naissance?: string | null
           pre_rempli_fields?: Json
-          prenoms?: string | null
-          profession?: string | null
         }
         Update: {
-          adresse_code_postal?: string | null
-          adresse_pays?: string | null
-          adresse_rue?: string | null
-          adresse_ville?: string | null
           birth_date?: string | null
-          civilite?: string | null
-          conjoint_civilite?: string | null
-          conjoint_date_naissance?: string | null
-          conjoint_lieu_naissance?: string | null
-          conjoint_nom_naissance?: string | null
-          conjoint_nom_usage?: string | null
-          conjoint_prenoms?: string | null
-          date_deces_conjoint?: string | null
-          date_mariage?: string | null
-          date_pacs?: string | null
           death_date?: string | null
           death_place?: string | null
           declaration_id?: string | null
-          departement_naissance?: string | null
           details?: Json | null
           domicile?: string | null
           full_name?: string | null
           id?: string
-          lieu_mariage?: string | null
           marital_status?: string | null
           matrimonial_regime?: string | null
           nationality?: string | null
-          nom_naissance?: string | null
-          nom_usage?: string | null
-          pays_naissance?: string | null
           pre_rempli_fields?: Json
-          prenoms?: string | null
-          profession?: string | null
         }
         Relationships: [
           {
@@ -336,73 +273,37 @@ export type Database = {
       }
       heritiers: {
         Row: {
-          adresse_code_postal: string | null
-          adresse_pays: string | null
-          adresse_rue: string | null
-          adresse_ville: string | null
           birth_date: string | null
-          civilite: string | null
           declaration_id: string | null
           email_notification: string | null
-          est_declarant: boolean | null
           full_name: string | null
           id: string
           lien_parente: string | null
-          lieu_naissance: string | null
-          nom_naissance: string | null
-          nom_usage: string | null
           ordre: number | null
           pre_rempli_fields: Json
-          prenoms: string | null
-          profession: string | null
           status: string | null
-          telephone: string | null
         }
         Insert: {
-          adresse_code_postal?: string | null
-          adresse_pays?: string | null
-          adresse_rue?: string | null
-          adresse_ville?: string | null
           birth_date?: string | null
-          civilite?: string | null
           declaration_id?: string | null
           email_notification?: string | null
-          est_declarant?: boolean | null
           full_name?: string | null
           id?: string
           lien_parente?: string | null
-          lieu_naissance?: string | null
-          nom_naissance?: string | null
-          nom_usage?: string | null
           ordre?: number | null
           pre_rempli_fields?: Json
-          prenoms?: string | null
-          profession?: string | null
           status?: string | null
-          telephone?: string | null
         }
         Update: {
-          adresse_code_postal?: string | null
-          adresse_pays?: string | null
-          adresse_rue?: string | null
-          adresse_ville?: string | null
           birth_date?: string | null
-          civilite?: string | null
           declaration_id?: string | null
           email_notification?: string | null
-          est_declarant?: boolean | null
           full_name?: string | null
           id?: string
           lien_parente?: string | null
-          lieu_naissance?: string | null
-          nom_naissance?: string | null
-          nom_usage?: string | null
           ordre?: number | null
           pre_rempli_fields?: Json
-          prenoms?: string | null
-          profession?: string | null
           status?: string | null
-          telephone?: string | null
         }
         Relationships: [
           {
