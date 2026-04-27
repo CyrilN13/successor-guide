@@ -18,6 +18,9 @@ import Etape from "./pages/Etape";
 import Synthese from "./pages/Synthese";
 import Connexion from "./pages/Connexion";
 import Inscription from "./pages/Inscription";
+import Cgu from "./pages/Cgu";
+import Confidentialite from "./pages/Confidentialite";
+import MentionsLegales from "./pages/MentionsLegales";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +48,9 @@ const App = () => (
             <Route path="/synthese" element={<Synthese />} />
             <Route path="/connexion" element={<Connexion />} />
             <Route path="/inscription" element={<Inscription />} />
+            <Route path="/cgu" element={<Cgu />} />
+            <Route path="/confidentialite" element={<Confidentialite />} />
+            <Route path="/mentions-legales" element={<MentionsLegales />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
