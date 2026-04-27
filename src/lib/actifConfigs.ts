@@ -97,7 +97,7 @@ export const ASSET_CONFIGS: Record<AssetTypeKey, AssetTypeConfig> = {
   },
 
   titres: {
-    valeurField: "valorisation",
+    valeurField: "quote_part_eur",
     fields: [
       { name: "libelle", label: "Libellé", type: "text", required: true, placeholder: "PEA Boursorama" },
       { name: "courtier", label: "Nom du courtier / banque", type: "text", required: true },
@@ -107,7 +107,23 @@ export const ASSET_CONFIGS: Record<AssetTypeKey, AssetTypeConfig> = {
         { value: "Assurance-vie en UC", label: "Assurance-vie en UC" },
         { value: "Autre", label: "Autre" },
       ]},
-      { name: "valorisation", label: "Valorisation totale au décès (€)", type: "number", required: true, suffix: "€" },
+      { name: "nature_droit", label: "Nature du droit", type: "select", required: true, options: [
+        { value: "Pleine propriété", label: "Pleine propriété" },
+        { value: "Indivision", label: "Indivision" },
+        { value: "Usufruit", label: "Usufruit" },
+        { value: "Nue-propriété", label: "Nue-propriété" },
+      ]},
+      { name: "quote_part", label: "Quote-part du défunt (%)", type: "number", required: true, placeholder: "100" },
+      { name: "valorisation", label: "Valorisation totale du portefeuille (€)", type: "number", required: true, suffix: "€" },
+      { name: "quote_part_eur", label: "Quote-part en € (calculée automatiquement)", type: "number", suffix: "€" },
+    ],
+    alerts: [
+      {
+        type: "info",
+        icon: Info,
+        condition: (v) => v.nature_droit === "Indivision" && Number(v.quote_part) < 100,
+        message: "Compte-titres en indivision : seule la quote-part du défunt entre dans l'actif successoral.",
+      },
     ],
   },
 
