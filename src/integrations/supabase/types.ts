@@ -416,6 +416,8 @@ export type Database = {
       }
       passif_items: {
         Row: {
+          creancier_adresse: string | null
+          creancier_nom: string | null
           declaration_id: string | null
           details: Json | null
           existait_au_deces: string | null
@@ -424,9 +426,12 @@ export type Database = {
           libelle: string | null
           montant: number | null
           pre_rempli: boolean | null
+          reference: string | null
           type_dette: string | null
         }
         Insert: {
+          creancier_adresse?: string | null
+          creancier_nom?: string | null
           declaration_id?: string | null
           details?: Json | null
           existait_au_deces?: string | null
@@ -435,9 +440,12 @@ export type Database = {
           libelle?: string | null
           montant?: number | null
           pre_rempli?: boolean | null
+          reference?: string | null
           type_dette?: string | null
         }
         Update: {
+          creancier_adresse?: string | null
+          creancier_nom?: string | null
           declaration_id?: string | null
           details?: Json | null
           existait_au_deces?: string | null
@@ -446,6 +454,7 @@ export type Database = {
           libelle?: string | null
           montant?: number | null
           pre_rempli?: boolean | null
+          reference?: string | null
           type_dette?: string | null
         }
         Relationships: [

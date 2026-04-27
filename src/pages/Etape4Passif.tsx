@@ -58,7 +58,9 @@ const EXISTAIT_OPTIONS = [
 const passifSchema = z.object({
   libelle: z.string().trim().min(1, "Le libellé est requis").max(200),
   type_dette: z.string().min(1, "Le type de dette est requis"),
-  creancier: z.string().trim().min(1, "Le créancier est requis").max(200),
+  creancier_nom: z.string().trim().max(200).optional().or(z.literal("")),
+  creancier_adresse: z.string().trim().max(300).optional().or(z.literal("")),
+  reference: z.string().trim().max(200).optional().or(z.literal("")),
   montant: z.coerce
     .number({ required_error: "Le montant est requis" })
     .positive("Le montant doit être positif"),
@@ -77,6 +79,9 @@ interface PassifItem {
   justificatif_url: string | null;
   declaration_id: string | null;
   details: Record<string, any> | null;
+  creancier_nom: string | null;
+  creancier_adresse: string | null;
+  reference: string | null;
 }
 
 const formatEur = (n: number) =>
@@ -102,7 +107,9 @@ const Etape4Passif = () => {
     defaultValues: {
       libelle: "",
       type_dette: "",
-      creancier: "",
+      creancier_nom: "",
+      creancier_adresse: "",
+      reference: "",
       montant: "" as any,
       existait_au_deces: "oui",
     },
@@ -143,7 +150,9 @@ const Etape4Passif = () => {
     form.reset({
       libelle: "",
       type_dette: "",
-      creancier: "",
+      creancier_nom: "",
+      creancier_adresse: "",
+      reference: "",
       montant: "" as any,
       existait_au_deces: "oui",
       date_origine: undefined,
@@ -158,7 +167,9 @@ const Etape4Passif = () => {
     form.reset({
       libelle: item.libelle ?? "",
       type_dette: item.type_dette ?? "",
-      creancier: (details.creancier as string) ?? "",
+      creancier_nom: item.creancier_nom ?? (details.creancier as string) ?? "",
+      creancier_adresse: item.creancier_adresse ?? "",
+      reference: item.reference ?? "",
       montant: (item.montant ?? "") as any,
       existait_au_deces: item.existait_au_deces ?? "oui",
       date_origine: details.date_origine
@@ -188,9 +199,7 @@ const Etape4Passif = () => {
     if (!declarationId) return;
     setSaving(true);
 
-    const details: Record<string, any> = {
-      creancier: values.creancier,
-    };
+    const details: Record<string, any> = {};
     if (values.date_origine) {
       details.date_origine = format(values.date_origine, "yyyy-MM-dd");
     }
@@ -199,6 +208,9 @@ const Etape4Passif = () => {
       declaration_id: declarationId,
       libelle: values.libelle,
       type_dette: values.type_dette,
+      creancier_nom: values.creancier_nom || null,
+      creancier_adresse: values.creancier_adresse || null,
+      reference: values.reference || null,
       montant: values.montant,
       existait_au_deces: values.existait_au_deces,
       details,
@@ -416,12 +428,40 @@ const Etape4Passif = () => {
 
               <FormField
                 control={form.control}
-                name="creancier"
+                name="creancier_nom"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Créancier *</FormLabel>
+                    <FormLabel>Nom du créancier</FormLabel>
                     <FormControl>
                       <Input placeholder="Crédit Mutuel" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="creancier_adresse"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adresse du créancier</FormLabel>
+                    <FormControl>
+                      <Input placeholder="12 rue de la République, 75001 Paris" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="reference"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Référence / numéro de contrat</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex : CR-2024-001234" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

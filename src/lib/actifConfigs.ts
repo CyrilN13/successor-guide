@@ -10,7 +10,7 @@ export const ASSET_TYPES = [
   { key: "entreprise", label: "Entreprise" },
   { key: "assurance_vie", label: "Assurance-vie" },
   { key: "crypto", label: "Crypto-actifs" },
-  { key: "autre", label: "Autres biens" },
+  { key: "autre", label: "Autres biens et créances diverses" },
 ] as const;
 
 export type AssetTypeKey = (typeof ASSET_TYPES)[number]["key"];
@@ -97,7 +97,7 @@ export const ASSET_CONFIGS: Record<AssetTypeKey, AssetTypeConfig> = {
   },
 
   titres: {
-    valeurField: "valorisation",
+    valeurField: "quote_part_eur",
     fields: [
       { name: "libelle", label: "Libellé", type: "text", required: true, placeholder: "PEA Boursorama" },
       { name: "courtier", label: "Nom du courtier / banque", type: "text", required: true },
@@ -107,7 +107,23 @@ export const ASSET_CONFIGS: Record<AssetTypeKey, AssetTypeConfig> = {
         { value: "Assurance-vie en UC", label: "Assurance-vie en UC" },
         { value: "Autre", label: "Autre" },
       ]},
-      { name: "valorisation", label: "Valorisation totale au décès (€)", type: "number", required: true, suffix: "€" },
+      { name: "nature_droit", label: "Nature du droit", type: "select", required: true, options: [
+        { value: "Pleine propriété", label: "Pleine propriété" },
+        { value: "Indivision", label: "Indivision" },
+        { value: "Usufruit", label: "Usufruit" },
+        { value: "Nue-propriété", label: "Nue-propriété" },
+      ]},
+      { name: "quote_part", label: "Quote-part du défunt (%)", type: "number", required: true, placeholder: "100" },
+      { name: "valorisation", label: "Valorisation totale du portefeuille (€)", type: "number", required: true, suffix: "€" },
+      { name: "quote_part_eur", label: "Quote-part en € (calculée automatiquement)", type: "number", suffix: "€" },
+    ],
+    alerts: [
+      {
+        type: "info",
+        icon: Info,
+        condition: (v) => v.nature_droit === "Indivision" && Number(v.quote_part) < 100,
+        message: "Compte-titres en indivision : seule la quote-part du défunt entre dans l'actif successoral.",
+      },
     ],
   },
 
@@ -179,8 +195,24 @@ export const ASSET_CONFIGS: Record<AssetTypeKey, AssetTypeConfig> = {
     valeurField: "valeur_estimee",
     fields: [
       { name: "libelle", label: "Libellé", type: "text", required: true, placeholder: "Bijoux, œuvres d'art…" },
+      { name: "type_autre", label: "Type", type: "select", required: true, options: [
+        { value: "Créance", label: "Créance (somme due au défunt — caution, EHPAD, particulier...)" },
+        { value: "Mobilier", label: "Mobilier / objets domestiques" },
+        { value: "Bijoux", label: "Bijoux" },
+        { value: "Œuvre d'art", label: "Œuvre d'art / collection" },
+        { value: "Remboursement", label: "Remboursement (impôt, mutuelle, salaire)" },
+        { value: "Autre", label: "Autre — préciser dans la description" },
+      ]},
       { name: "description", label: "Description", type: "textarea", colSpan: 2 },
       { name: "valeur_estimee", label: "Valeur estimée (€)", type: "number", required: true, suffix: "€" },
+    ],
+    alerts: [
+      {
+        type: "info",
+        icon: Info,
+        condition: (v) => v.type_autre === "Créance",
+        message: "Les créances (sommes dues au défunt) font partie de l'actif successoral. Conservez le justificatif.",
+      },
     ],
   },
 };
