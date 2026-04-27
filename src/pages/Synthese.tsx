@@ -276,9 +276,7 @@ const Synthese = () => {
     actifNet,
     rappelDonations,
     actifImposable,
-    droitsBasse,
-    droitsMoyen,
-    droitsHaute,
+    total_droits,
   ]);
 
   // ─── Edge function CERFA download ───
