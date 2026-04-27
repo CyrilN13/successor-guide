@@ -32,6 +32,10 @@
     --input: 40 15% 88%;
     --ring: 41 45% 60%;
 
+    /* République branding */
+    --accent-republic: 240 100% 28%; /* #000091 */
+    --accent-soft: 240 80% 98%;      /* #f5f5fe */
+
     --radius: 0.5rem;
 
     --sidebar-background: 40 33% 97%;
@@ -72,6 +76,9 @@
     --border: 220 30% 20%;
     --input: 220 30% 20%;
     --ring: 41 45% 60%;
+
+    --accent-republic: 240 100% 75%;
+    --accent-soft: 240 30% 18%;
 
     --sidebar-background: 220 36% 10%;
     --sidebar-foreground: 40 33% 97%;
