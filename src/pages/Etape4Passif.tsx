@@ -58,7 +58,9 @@ const EXISTAIT_OPTIONS = [
 const passifSchema = z.object({
   libelle: z.string().trim().min(1, "Le libellé est requis").max(200),
   type_dette: z.string().min(1, "Le type de dette est requis"),
-  creancier: z.string().trim().min(1, "Le créancier est requis").max(200),
+  creancier_nom: z.string().trim().max(200).optional().or(z.literal("")),
+  creancier_adresse: z.string().trim().max(300).optional().or(z.literal("")),
+  reference: z.string().trim().max(200).optional().or(z.literal("")),
   montant: z.coerce
     .number({ required_error: "Le montant est requis" })
     .positive("Le montant doit être positif"),
