@@ -7,7 +7,6 @@ import { format } from "date-fns";
 import { Info } from "lucide-react";
 import { toast } from "sonner";
 
-import { cn } from "@/lib/utils";
 import { DateInput } from "@/components/ui/date-input";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -18,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -39,6 +39,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { DEPARTEMENTS_FR } from "@/lib/departementsFR";
 
 const NATIONALITES = [
   "Française",
@@ -71,11 +72,16 @@ const REGIMES_MATRIMONIAUX = [
 
 const defuntSchema = z
   .object({
+    civilite: z.enum(["M.", "Mme"], { required_error: "La civilité est requise" }),
     nom_naissance: z.string().trim().min(1, "Le nom de naissance est requis").max(100),
     nom_usage: z.string().trim().max(100).optional().or(z.literal("")),
     prenoms: z.string().trim().min(1, "Les prénoms sont requis").max(200),
+    profession: z.string().trim().max(200).optional().or(z.literal("")),
     birth_date: z.date({ required_error: "La date de naissance est requise" }),
-    lieu_naissance: z.string().trim().min(1, "Le lieu de naissance est requis").max(200),
+    ne_etranger: z.boolean().default(false),
+    departement_naissance: z.string().optional().or(z.literal("")),
+    pays_naissance: z.string().optional().or(z.literal("")),
+    lieu_naissance: z.string().trim().min(1, "Le lieu (commune) de naissance est requis").max(200),
     death_date: z.date({ required_error: "La date de décès est requise" }),
     lieu_deces: z.string().trim().min(1, "Le lieu de décès est requis").max(200),
     adresse_rue: z.string().trim().min(1, "L'adresse est requise").max(300),
@@ -85,19 +91,35 @@ const defuntSchema = z
     nationalite: z.string().min(1, "La nationalité est requise"),
     situation_matrimoniale: z.string().min(1, "La situation matrimoniale est requise"),
     regime_matrimonial: z.string().optional().or(z.literal("")),
+
+    // Conjoint
+    conjoint_civilite: z.string().optional().or(z.literal("")),
+    conjoint_nom_naissance: z.string().optional().or(z.literal("")),
+    conjoint_nom_usage: z.string().optional().or(z.literal("")),
+    conjoint_prenoms: z.string().optional().or(z.literal("")),
+    conjoint_date_naissance: z.date().optional(),
+    conjoint_lieu_naissance: z.string().optional().or(z.literal("")),
+    date_mariage: z.date().optional(),
+    lieu_mariage: z.string().optional().or(z.literal("")),
+    date_pacs: z.date().optional(),
+    date_deces_conjoint: z.date().optional(),
   })
-  .refine(
-    (d) => d.birth_date < new Date(),
-    { message: "La date de naissance doit être dans le passé", path: ["birth_date"] }
-  )
-  .refine(
-    (d) => d.death_date <= new Date(),
-    { message: "La date de décès ne peut pas être dans le futur", path: ["death_date"] }
-  )
-  .refine(
-    (d) => d.death_date >= d.birth_date,
-    { message: "La date de décès doit être postérieure à la date de naissance", path: ["death_date"] }
-  );
+  .refine((d) => d.birth_date < new Date(), {
+    message: "La date de naissance doit être dans le passé",
+    path: ["birth_date"],
+  })
+  .refine((d) => d.death_date <= new Date(), {
+    message: "La date de décès ne peut pas être dans le futur",
+    path: ["death_date"],
+  })
+  .refine((d) => d.death_date >= d.birth_date, {
+    message: "La date de décès doit être postérieure à la date de naissance",
+    path: ["death_date"],
+  })
+  .refine((d) => d.ne_etranger ? !!d.pays_naissance : !!d.departement_naissance, {
+    message: "Précisez le département (ou cochez « né(e) à l'étranger »)",
+    path: ["departement_naissance"],
+  });
 
 type DefuntFormValues = z.infer<typeof defuntSchema>;
 
@@ -112,9 +134,14 @@ const Etape1Defunt = () => {
   const form = useForm<DefuntFormValues>({
     resolver: zodResolver(defuntSchema),
     defaultValues: {
+      civilite: undefined as any,
       nom_naissance: "",
       nom_usage: "",
       prenoms: "",
+      profession: "",
+      ne_etranger: false,
+      departement_naissance: "",
+      pays_naissance: "",
       lieu_naissance: "",
       lieu_deces: "",
       adresse_rue: "",
@@ -124,21 +151,34 @@ const Etape1Defunt = () => {
       nationalite: "Française",
       situation_matrimoniale: "",
       regime_matrimonial: "",
+      conjoint_civilite: "",
+      conjoint_nom_naissance: "",
+      conjoint_nom_usage: "",
+      conjoint_prenoms: "",
+      conjoint_lieu_naissance: "",
+      lieu_mariage: "",
     },
   });
 
   const watched = form.watch();
-  // Stringify so useDebounce sees a stable primitive — avoids infinite loop
-  // (form.watch() returns a new object reference on every render).
   const watchedKey = JSON.stringify(watched, (_k, v) =>
     v instanceof Date ? v.toISOString() : v
   );
   const debouncedKey = useDebounce(watchedKey, 800);
 
   const situationMatrimoniale = form.watch("situation_matrimoniale");
+  const neEtranger = form.watch("ne_etranger");
   const showRegime = situationMatrimoniale === "Marié(e)";
+  const showConjoint =
+    situationMatrimoniale === "Marié(e)" ||
+    situationMatrimoniale === "Pacsé(e)" ||
+    situationMatrimoniale === "Veuf(ve)";
+  const showMariage =
+    situationMatrimoniale === "Marié(e)" || situationMatrimoniale === "Veuf(ve)";
+  const showPacs = situationMatrimoniale === "Pacsé(e)";
+  const showDecesConjoint = situationMatrimoniale === "Veuf(ve)";
 
-  // Load declaration and existing defunt data
+  // Load
   useEffect(() => {
     const loadData = async () => {
       const token = localStorage.getItem("deesse_token");
@@ -162,25 +202,40 @@ const Etape1Defunt = () => {
         .maybeSingle();
 
       if (defunt) {
-        const details = ((defunt as any).details as Record<string, string>) ?? {};
+        const d = defunt as any;
+        const details = (d.details as Record<string, string>) ?? {};
         form.reset({
-          nom_naissance: defunt.full_name?.split(" ")[0] ?? "",
-          nom_usage: details.nom_usage ?? "",
-          prenoms: details.prenoms ?? "",
-          birth_date: defunt.birth_date ? new Date(defunt.birth_date) : undefined as any,
+          civilite: (d.civilite as "M." | "Mme") ?? (undefined as any),
+          nom_naissance: d.nom_naissance ?? d.full_name?.split(" ")[0] ?? "",
+          nom_usage: d.nom_usage ?? "",
+          prenoms: d.prenoms ?? "",
+          profession: d.profession ?? "",
+          ne_etranger: !!d.pays_naissance && d.pays_naissance !== "France",
+          departement_naissance: d.departement_naissance ?? "",
+          pays_naissance: d.pays_naissance ?? "",
+          birth_date: d.birth_date ? new Date(d.birth_date) : (undefined as any),
           lieu_naissance: details.lieu_naissance ?? "",
-          death_date: defunt.death_date ? new Date(defunt.death_date) : undefined as any,
-          lieu_deces: defunt.death_place ?? "",
-          adresse_rue: details.adresse_rue ?? "",
-          adresse_code_postal: details.adresse_code_postal ?? "",
-          adresse_ville: details.adresse_ville ?? "",
-          adresse_pays: details.adresse_pays ?? "France",
-          nationalite: defunt.nationality ?? "Française",
-          situation_matrimoniale: defunt.marital_status ?? "",
-          regime_matrimonial: defunt.matrimonial_regime ?? "",
+          death_date: d.death_date ? new Date(d.death_date) : (undefined as any),
+          lieu_deces: d.death_place ?? "",
+          adresse_rue: d.adresse_rue ?? details.adresse_rue ?? "",
+          adresse_code_postal: d.adresse_code_postal ?? details.adresse_code_postal ?? "",
+          adresse_ville: d.adresse_ville ?? details.adresse_ville ?? "",
+          adresse_pays: d.adresse_pays ?? details.adresse_pays ?? "France",
+          nationalite: d.nationality ?? "Française",
+          situation_matrimoniale: d.marital_status ?? "",
+          regime_matrimonial: d.matrimonial_regime ?? "",
+          conjoint_civilite: d.conjoint_civilite ?? "",
+          conjoint_nom_naissance: d.conjoint_nom_naissance ?? "",
+          conjoint_nom_usage: d.conjoint_nom_usage ?? "",
+          conjoint_prenoms: d.conjoint_prenoms ?? "",
+          conjoint_date_naissance: d.conjoint_date_naissance ? new Date(d.conjoint_date_naissance) : undefined,
+          conjoint_lieu_naissance: d.conjoint_lieu_naissance ?? "",
+          date_mariage: d.date_mariage ? new Date(d.date_mariage) : undefined,
+          lieu_mariage: d.lieu_mariage ?? "",
+          date_pacs: d.date_pacs ? new Date(d.date_pacs) : undefined,
+          date_deces_conjoint: d.date_deces_conjoint ? new Date(d.date_deces_conjoint) : undefined,
         });
       }
-      // Allow autosave to start AFTER initial reset propagates
       setTimeout(() => {
         initialLoadDone.current = true;
       }, 100);
@@ -188,50 +243,77 @@ const Etape1Defunt = () => {
     loadData();
   }, [form]);
 
-  // Auto-save (debounced via useDebounce on watched form values)
-  const autoSave = useCallback(async (values: DefuntFormValues) => {
-    if (!declarationId) return;
+  const fmtDate = (d?: Date) => (d ? format(d, "yyyy-MM-dd") : null);
 
-    const payload = {
-      declaration_id: declarationId,
-      full_name: `${values.nom_naissance ?? ""} ${values.prenoms ?? ""}`.trim() || null,
-      birth_date: values.birth_date ? format(values.birth_date, "yyyy-MM-dd") : null,
-      death_date: values.death_date ? format(values.death_date, "yyyy-MM-dd") : null,
-      death_place: values.lieu_deces || null,
-      domicile: [values.adresse_rue, values.adresse_code_postal, values.adresse_ville, values.adresse_pays]
-        .filter(Boolean)
-        .join(", ") || null,
-      nationality: values.nationalite || null,
-      marital_status: values.situation_matrimoniale || null,
-      matrimonial_regime: showRegime ? values.regime_matrimonial || null : null,
-      details: {
-        nom_naissance: values.nom_naissance,
-        nom_usage: values.nom_usage,
-        prenoms: values.prenoms,
-        lieu_naissance: values.lieu_naissance,
-        adresse_rue: values.adresse_rue,
-        adresse_code_postal: values.adresse_code_postal,
-        adresse_ville: values.adresse_ville,
-        adresse_pays: values.adresse_pays,
-      },
-    };
+  const autoSave = useCallback(
+    async (values: DefuntFormValues) => {
+      if (!declarationId) return;
 
-    setSaveStatus("saving");
-    const { error } = await (supabase.from("defunts") as any).upsert(payload, { onConflict: "declaration_id" });
-    if (error) {
-      console.error("Erreur autosave défunt:", error);
-      setSaveStatus("idle");
-      toast.error("Échec de l'enregistrement : " + error.message);
-      return;
-    }
-    setSaveStatus("saved");
-    if (savedTimer.current) window.clearTimeout(savedTimer.current);
-    savedTimer.current = window.setTimeout(() => setSaveStatus("idle"), 1500);
-  }, [declarationId, showRegime]);
+      const fullName = `${values.nom_naissance ?? ""} ${values.prenoms ?? ""}`.trim() || null;
+      const domicile =
+        [values.adresse_rue, values.adresse_code_postal, values.adresse_ville, values.adresse_pays]
+          .filter(Boolean)
+          .join(", ") || null;
 
-  // Trigger autosave whenever the *serialized* values actually change
-  // (after initial load). Using the string key prevents the object-identity
-  // loop that made the indicator flash "Sauvegarde…" forever.
+      const payload: Record<string, any> = {
+        declaration_id: declarationId,
+        civilite: values.civilite || null,
+        nom_naissance: values.nom_naissance || null,
+        nom_usage: values.nom_usage || null,
+        prenoms: values.prenoms || null,
+        profession: values.profession || null,
+        full_name: fullName,
+        birth_date: fmtDate(values.birth_date),
+        death_date: fmtDate(values.death_date),
+        death_place: values.lieu_deces || null,
+        departement_naissance: values.ne_etranger ? null : values.departement_naissance || null,
+        pays_naissance: values.ne_etranger ? values.pays_naissance || null : "France",
+        domicile,
+        adresse_rue: values.adresse_rue || null,
+        adresse_code_postal: values.adresse_code_postal || null,
+        adresse_ville: values.adresse_ville || null,
+        adresse_pays: values.adresse_pays || null,
+        nationality: values.nationalite || null,
+        marital_status: values.situation_matrimoniale || null,
+        matrimonial_regime: showRegime ? values.regime_matrimonial || null : null,
+
+        conjoint_civilite: showConjoint ? values.conjoint_civilite || null : null,
+        conjoint_nom_naissance: showConjoint ? values.conjoint_nom_naissance || null : null,
+        conjoint_nom_usage: showConjoint ? values.conjoint_nom_usage || null : null,
+        conjoint_prenoms: showConjoint ? values.conjoint_prenoms || null : null,
+        conjoint_date_naissance: showConjoint ? fmtDate(values.conjoint_date_naissance) : null,
+        conjoint_lieu_naissance: showConjoint ? values.conjoint_lieu_naissance || null : null,
+        date_mariage: showMariage ? fmtDate(values.date_mariage) : null,
+        lieu_mariage: showMariage ? values.lieu_mariage || null : null,
+        date_pacs: showPacs ? fmtDate(values.date_pacs) : null,
+        date_deces_conjoint: showDecesConjoint ? fmtDate(values.date_deces_conjoint) : null,
+
+        details: {
+          lieu_naissance: values.lieu_naissance,
+          adresse_rue: values.adresse_rue,
+          adresse_code_postal: values.adresse_code_postal,
+          adresse_ville: values.adresse_ville,
+          adresse_pays: values.adresse_pays,
+        },
+      };
+
+      setSaveStatus("saving");
+      const { error } = await (supabase.from("defunts") as any).upsert(payload, {
+        onConflict: "declaration_id",
+      });
+      if (error) {
+        console.error("Erreur autosave défunt:", error);
+        setSaveStatus("idle");
+        toast.error("Échec de l'enregistrement : " + error.message);
+        return;
+      }
+      setSaveStatus("saved");
+      if (savedTimer.current) window.clearTimeout(savedTimer.current);
+      savedTimer.current = window.setTimeout(() => setSaveStatus("idle"), 1500);
+    },
+    [declarationId, showRegime, showConjoint, showMariage, showPacs, showDecesConjoint]
+  );
+
   useEffect(() => {
     if (!declarationId || !initialLoadDone.current) return;
     autoSave(form.getValues());
@@ -241,31 +323,24 @@ const Etape1Defunt = () => {
   const onSubmit = async (values: DefuntFormValues) => {
     if (!declarationId) return;
     setSaving(true);
-
     await autoSave(values);
-    await supabase
-      .from("declarations")
-      .update({ current_step: 1 })
-      .eq("id", declarationId);
-
+    await supabase.from("declarations").update({ current_step: 1 }).eq("id", declarationId);
     setSaving(false);
     navigate("/etape/2");
   };
 
   const onInvalid = () => {
-    // Scroll to first error so the user understands why nothing happened
     const firstError = document.querySelector('[aria-invalid="true"]');
     firstError?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  // No-op kept for compatibility with existing onBlur handlers — autosave is now reactive via useDebounce
   const handleFieldBlur = useCallback(() => {}, []);
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
       <ModeIaSourcePreview />
       <SaveIndicator status={saveStatus} />
-      {/* Progress */}
+
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-muted-foreground font-medium">
@@ -290,6 +365,34 @@ const Etape1Defunt = () => {
             <CardContent className="p-6 space-y-4">
               <h2 className="font-heading text-lg font-semibold">État civil</h2>
 
+              {/* Civilité */}
+              <FormField
+                control={form.control}
+                name="civilite"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Civilité *</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={(v) => { field.onChange(v); handleFieldBlur(); }}
+                        value={field.value}
+                        className="flex gap-6 mt-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="M." id="civ-m" />
+                          <Label htmlFor="civ-m" className="cursor-pointer">M.</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="Mme" id="civ-mme" />
+                          <Label htmlFor="civ-mme" className="cursor-pointer">Mme</Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -298,11 +401,7 @@ const Etape1Defunt = () => {
                     <FormItem>
                       <FormLabel>Nom de naissance *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Dupont"
-                          {...field}
-                          onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                        />
+                        <Input placeholder="Dupont" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -313,13 +412,19 @@ const Etape1Defunt = () => {
                   name="nom_usage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nom d'usage</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormLabel>Nom d'usage</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-sm">
+                            Nom utilisé après mariage ou usage commun. Laisser vide si identique au nom de naissance.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <FormControl>
-                        <Input
-                          placeholder="Optionnel"
-                          {...field}
-                          onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                        />
+                        <Input placeholder="Optionnel" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -334,11 +439,31 @@ const Etape1Defunt = () => {
                   <FormItem>
                     <FormLabel>Prénoms *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Jean Pierre Marie"
-                        {...field}
-                        onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                      />
+                      <Input placeholder="Jean Pierre Marie" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="profession"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Profession</FormLabel>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-sm">
+                          Profession exercée au jour du décès, ou ancienne profession si retraité(e).
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <FormControl>
+                      <Input placeholder="Optionnel" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -355,7 +480,7 @@ const Etape1Defunt = () => {
                       <FormControl>
                         <DateInput
                           value={field.value}
-                          onChange={(d) => { field.onChange(d); handleFieldBlur(); }}
+                          onChange={(d) => field.onChange(d)}
                           onBlur={field.onBlur}
                           max={new Date().toISOString().split("T")[0]}
                         />
@@ -369,19 +494,86 @@ const Etape1Defunt = () => {
                   name="lieu_naissance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lieu de naissance *</FormLabel>
+                      <FormLabel>Commune de naissance *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Paris"
-                          {...field}
-                          onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                        />
+                        <Input placeholder="Paris" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              {/* Né(e) à l'étranger */}
+              <FormField
+                control={form.control}
+                name="ne_etranger"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="ne-etranger"
+                        checked={!!field.value}
+                        onCheckedChange={(c) => {
+                          const checked = !!c;
+                          field.onChange(checked);
+                          if (checked) {
+                            form.setValue("departement_naissance", "");
+                          } else {
+                            form.setValue("pays_naissance", "");
+                          }
+                        }}
+                      />
+                      <Label htmlFor="ne-etranger" className="cursor-pointer text-sm">
+                        Né(e) à l'étranger
+                      </Label>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {!neEtranger && (
+                <FormField
+                  control={form.control}
+                  name="departement_naissance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Département de naissance *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un département" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-72">
+                          {DEPARTEMENTS_FR.map((d) => (
+                            <SelectItem key={d.code} value={d.code}>
+                              {d.code} — {d.nom}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {neEtranger && (
+                <FormField
+                  control={form.control}
+                  name="pays_naissance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pays de naissance *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Maroc, Italie, …" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -393,7 +585,7 @@ const Etape1Defunt = () => {
                       <FormControl>
                         <DateInput
                           value={field.value}
-                          onChange={(d) => { field.onChange(d); handleFieldBlur(); }}
+                          onChange={(d) => field.onChange(d)}
                           onBlur={field.onBlur}
                           max={new Date().toISOString().split("T")[0]}
                         />
@@ -409,11 +601,7 @@ const Etape1Defunt = () => {
                     <FormItem>
                       <FormLabel>Lieu de décès *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Lyon"
-                          {...field}
-                          onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                        />
+                        <Input placeholder="Lyon" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -435,13 +623,9 @@ const Etape1Defunt = () => {
                 name="adresse_rue"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rue *</FormLabel>
+                    <FormLabel>Rue / numéro *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="12 rue de la Paix"
-                        {...field}
-                        onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                      />
+                      <Input placeholder="12 rue de la Paix" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -456,11 +640,7 @@ const Etape1Defunt = () => {
                     <FormItem>
                       <FormLabel>Code postal *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="75002"
-                          {...field}
-                          onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                        />
+                        <Input placeholder="75002" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -473,11 +653,7 @@ const Etape1Defunt = () => {
                     <FormItem>
                       <FormLabel>Ville *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Paris"
-                          {...field}
-                          onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                        />
+                        <Input placeholder="Paris" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -490,11 +666,7 @@ const Etape1Defunt = () => {
                     <FormItem>
                       <FormLabel>Pays *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="France"
-                          {...field}
-                          onBlur={() => { field.onBlur(); handleFieldBlur(); }}
-                        />
+                        <Input placeholder="France" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -517,10 +689,7 @@ const Etape1Defunt = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nationalité *</FormLabel>
-                    <Select
-                      onValueChange={(v) => { field.onChange(v); handleFieldBlur(); }}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner" />
@@ -547,7 +716,7 @@ const Etape1Defunt = () => {
                     <FormLabel>Situation matrimoniale *</FormLabel>
                     <FormControl>
                       <RadioGroup
-                        onValueChange={(v) => { field.onChange(v); handleFieldBlur(); }}
+                        onValueChange={field.onChange}
                         value={field.value}
                         className="flex flex-wrap gap-4 mt-2"
                       >
@@ -585,10 +754,7 @@ const Etape1Defunt = () => {
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <Select
-                        onValueChange={(v) => { field.onChange(v); handleFieldBlur(); }}
-                        value={field.value}
-                      >
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Sélectionner le régime" />
@@ -610,13 +776,192 @@ const Etape1Defunt = () => {
             </CardContent>
           </Card>
 
+          {/* Conjoint */}
+          {showConjoint && (
+            <Card className="border-accent/40">
+              <CardContent className="p-6 space-y-4">
+                <h2 className="font-heading text-lg font-semibold">
+                  Informations sur le conjoint(e)
+                </h2>
+
+                <FormField
+                  control={form.control}
+                  name="conjoint_civilite"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Civilité</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value || ""}
+                          className="flex gap-6 mt-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="M." id="conj-civ-m" />
+                            <Label htmlFor="conj-civ-m" className="cursor-pointer">M.</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="Mme" id="conj-civ-mme" />
+                            <Label htmlFor="conj-civ-mme" className="cursor-pointer">Mme</Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="conjoint_nom_naissance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nom de naissance</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Martin" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="conjoint_nom_usage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nom d'usage</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Optionnel" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="conjoint_prenoms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prénoms</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Marie Claire" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="conjoint_date_naissance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date de naissance</FormLabel>
+                        <FormControl>
+                          <DateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            max={new Date().toISOString().split("T")[0]}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="conjoint_lieu_naissance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lieu de naissance</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Bordeaux" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {showMariage && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="date_mariage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date du mariage</FormLabel>
+                          <FormControl>
+                            <DateInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              max={new Date().toISOString().split("T")[0]}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lieu_mariage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lieu du mariage</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Paris" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {showPacs && (
+                  <FormField
+                    control={form.control}
+                    name="date_pacs"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date du PACS</FormLabel>
+                        <FormControl>
+                          <DateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            max={new Date().toISOString().split("T")[0]}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {showDecesConjoint && (
+                  <FormField
+                    control={form.control}
+                    name="date_deces_conjoint"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date de décès du conjoint(e)</FormLabel>
+                        <FormControl>
+                          <DateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            max={new Date().toISOString().split("T")[0]}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/diagnostic")}
-            >
+            <Button type="button" variant="outline" onClick={() => navigate("/diagnostic")}>
               Précédent
             </Button>
             <Button
