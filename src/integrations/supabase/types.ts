@@ -471,21 +471,27 @@ export type Database = {
         Row: {
           accepted_cgu: boolean | null
           accepted_privacy: boolean | null
+          accepted_responsibility: boolean | null
           created_at: string | null
+          declared_no_notary: boolean | null
           email: string
           id: string
         }
         Insert: {
           accepted_cgu?: boolean | null
           accepted_privacy?: boolean | null
+          accepted_responsibility?: boolean | null
           created_at?: string | null
+          declared_no_notary?: boolean | null
           email: string
           id: string
         }
         Update: {
           accepted_cgu?: boolean | null
           accepted_privacy?: boolean | null
+          accepted_responsibility?: boolean | null
           created_at?: string | null
+          declared_no_notary?: boolean | null
           email?: string
           id?: string
         }
