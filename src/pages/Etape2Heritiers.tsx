@@ -234,10 +234,9 @@ const Etape2Heritiers = () => {
     await track(async () => {
       let savedId = editingId;
       if (editingId) {
-        await supabase.from("heritiers").update(payload).eq("id", editingId);
+        await (supabase.from("heritiers") as any).update(payload).eq("id", editingId);
       } else {
-        const { data: inserted } = await supabase
-          .from("heritiers")
+        const { data: inserted } = await (supabase.from("heritiers") as any)
           .insert(payload)
           .select("id")
           .maybeSingle();
