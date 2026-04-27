@@ -757,24 +757,73 @@ const Synthese = () => {
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-md bg-primary p-5 text-primary-foreground">
-            <div className="text-sm opacity-80">Fourchette estimative des droits</div>
-            <div className="mt-1 text-2xl font-semibold">
-              entre {fmtEuro(droitsBasse)} et {fmtEuro(droitsHaute)}
-            </div>
-            <div className="mt-1 text-xs opacity-80">
-              basse 4 % · moyenne {fmtEuro(droitsMoyen)} (5 %) · haute 6 %
-            </div>
-          </div>
-          <Alert className="mt-4 border-accent bg-accent/5">
-            <Info className="h-5 w-5 text-accent" />
-            <AlertDescription className="text-base font-medium text-foreground">
-              Cette estimation est <strong>indicative</strong> et ne tient pas compte des
-              abattements individuels par héritier, des exonérations spécifiques (conjoint
-              survivant, partenaire PACS…) ni des réductions pour charge de famille. Le
-              calcul officiel est réalisé par la DGFIP.
-            </AlertDescription>
-          </Alert>
+          {hors_periphere ? (
+            <Alert className="mt-4">
+              <Info className="h-5 w-5" />
+              <AlertDescription className="text-base">
+                Votre situation comporte des éléments qui rendent le calcul automatique
+                imprécis. Nous indiquons l'actif imposable mais pas l'estimation des droits.
+                Pour un calcul fiable, consultez un professionnel ou attendez le calcul de
+                la DGFIP.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="mt-4 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Héritier (lien)</TableHead>
+                      <TableHead className="text-right">Part brute</TableHead>
+                      <TableHead className="text-right">Abattement</TableHead>
+                      <TableHead className="text-right">Base imposable</TableHead>
+                      <TableHead className="text-right">Droits estimés</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {par_heritier.map((p, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          {p.nom}
+                          <span className="text-muted-foreground"> ({p.lien})</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.part_brute.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.abattement.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.base_imposable.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {p.exonere
+                            ? "EXONÉRÉ(E)"
+                            : `${p.droits.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €`}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-right font-bold">
+                        Total des droits estimés
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {total_droits.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+              <Alert className="mt-4 border-accent bg-accent/5">
+                <Info className="h-5 w-5 text-accent" />
+                <AlertDescription className="text-base font-medium text-foreground">
+                  Cette estimation suppose une répartition à parts égales entre héritiers
+                  acceptants. Elle n'inclut pas les exonérations spécifiques (transmission
+                  d'entreprise, etc.). Le calcul officiel est réalisé par la DGFIP.
+                </AlertDescription>
+              </Alert>
+            </>
+          )}
         </CardContent>
       </Card>
 
