@@ -195,8 +195,24 @@ export const ASSET_CONFIGS: Record<AssetTypeKey, AssetTypeConfig> = {
     valeurField: "valeur_estimee",
     fields: [
       { name: "libelle", label: "Libellé", type: "text", required: true, placeholder: "Bijoux, œuvres d'art…" },
+      { name: "type_autre", label: "Type", type: "select", required: true, options: [
+        { value: "Créance", label: "Créance (somme due au défunt — caution, EHPAD, particulier...)" },
+        { value: "Mobilier", label: "Mobilier / objets domestiques" },
+        { value: "Bijoux", label: "Bijoux" },
+        { value: "Œuvre d'art", label: "Œuvre d'art / collection" },
+        { value: "Remboursement", label: "Remboursement (impôt, mutuelle, salaire)" },
+        { value: "Autre", label: "Autre — préciser dans la description" },
+      ]},
       { name: "description", label: "Description", type: "textarea", colSpan: 2 },
       { name: "valeur_estimee", label: "Valeur estimée (€)", type: "number", required: true, suffix: "€" },
+    ],
+    alerts: [
+      {
+        type: "info",
+        icon: Info,
+        condition: (v) => v.type_autre === "Créance",
+        message: "Les créances (sommes dues au défunt) font partie de l'actif successoral. Conservez le justificatif.",
+      },
     ],
   },
 };
