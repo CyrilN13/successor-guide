@@ -147,7 +147,9 @@ const Etape4Passif = () => {
     form.reset({
       libelle: "",
       type_dette: "",
-      creancier: "",
+      creancier_nom: "",
+      creancier_adresse: "",
+      reference: "",
       montant: "" as any,
       existait_au_deces: "oui",
       date_origine: undefined,
