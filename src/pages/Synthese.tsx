@@ -151,14 +151,12 @@ const Synthese = () => {
 
   const actifBrut = actifs.reduce((s, i) => s + Number(i.valeur_estimee || 0), 0);
   const passifTotal = passifs.reduce((s, i) => s + Number(i.montant || 0), 0);
-  const actifNet = actifBrut - passifTotal;
   const rappelDonations = donations
     .filter((d) => d.dans_15_ans)
     .reduce((s, d) => s + Number(d.montant || 0), 0);
-  const actifImposable = actifNet + rappelDonations;
-  const droitsBasse = Math.max(0, actifImposable * 0.04);
-  const droitsMoyen = Math.max(0, actifImposable * 0.05);
-  const droitsHaute = Math.max(0, actifImposable * 0.06);
+
+  const result = calculerDroits(actifBrut, passifTotal, rappelDonations, heritiers as any[]);
+  const { actif_net: actifNet, actif_imposable: actifImposable, par_heritier, total_droits, hors_periphere } = result;
 
   // ─── Alerts ───
   const alerts: { icon: typeof AlertTriangle; message: string }[] = [];
