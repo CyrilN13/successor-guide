@@ -199,9 +199,7 @@ const Etape4Passif = () => {
     if (!declarationId) return;
     setSaving(true);
 
-    const details: Record<string, any> = {
-      creancier: values.creancier,
-    };
+    const details: Record<string, any> = {};
     if (values.date_origine) {
       details.date_origine = format(values.date_origine, "yyyy-MM-dd");
     }
@@ -210,6 +208,9 @@ const Etape4Passif = () => {
       declaration_id: declarationId,
       libelle: values.libelle,
       type_dette: values.type_dette,
+      creancier_nom: values.creancier_nom || null,
+      creancier_adresse: values.creancier_adresse || null,
+      reference: values.reference || null,
       montant: values.montant,
       existait_au_deces: values.existait_au_deces,
       details,
