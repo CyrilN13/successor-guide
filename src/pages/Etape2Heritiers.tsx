@@ -4,12 +4,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  AlertTriangle,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, AlertTriangle, PenLine } from "lucide-react";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { DateInput } from "@/components/ui/date-input";
@@ -18,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import {
@@ -61,27 +59,69 @@ const STATUTS = [
 ];
 
 const heritierSchema = z.object({
-  full_name: z.string().trim().min(1, "Le nom est requis").max(100),
+  civilite: z.enum(["M.", "Mme"], { required_error: "La civilité est requise" }),
+  nom_naissance: z.string().trim().min(1, "Le nom de naissance est requis").max(100),
+  nom_usage: z.string().trim().max(100).optional().or(z.literal("")),
   prenoms: z.string().trim().min(1, "Les prénoms sont requis").max(200),
   birth_date: z.date({ required_error: "La date de naissance est requise" }),
+  lieu_naissance: z.string().trim().max(200).optional().or(z.literal("")),
   lien_parente: z.string().min(1, "Le lien de parenté est requis"),
   ordre: z.coerce.number().int().positive().optional().or(z.literal("")),
   status: z.string().min(1, "Le statut est requis"),
   email_notification: z.string().email("Email invalide").optional().or(z.literal("")),
+  telephone: z.string().trim().max(40).optional().or(z.literal("")),
+  profession: z.string().trim().max(200).optional().or(z.literal("")),
+  adresse_rue: z.string().trim().max(300).optional().or(z.literal("")),
+  adresse_code_postal: z.string().trim().max(10).optional().or(z.literal("")),
+  adresse_ville: z.string().trim().max(100).optional().or(z.literal("")),
+  adresse_pays: z.string().trim().max(100).optional().or(z.literal("")),
+  est_declarant: z.boolean().default(false),
 });
 
 type HeritierFormValues = z.infer<typeof heritierSchema>;
 
 interface Heritier {
   id: string;
-  full_name: string;
+  full_name: string | null;
+  civilite: string | null;
+  nom_naissance: string | null;
+  nom_usage: string | null;
+  prenoms: string | null;
   birth_date: string | null;
+  lieu_naissance: string | null;
   lien_parente: string | null;
   ordre: number | null;
   status: string | null;
   email_notification: string | null;
+  telephone: string | null;
+  profession: string | null;
+  adresse_rue: string | null;
+  adresse_code_postal: string | null;
+  adresse_ville: string | null;
+  adresse_pays: string | null;
+  est_declarant: boolean | null;
   declaration_id: string | null;
 }
+
+const defaultFormValues: HeritierFormValues = {
+  civilite: undefined as any,
+  nom_naissance: "",
+  nom_usage: "",
+  prenoms: "",
+  birth_date: undefined as any,
+  lieu_naissance: "",
+  lien_parente: "",
+  ordre: "",
+  status: "non_precise",
+  email_notification: "",
+  telephone: "",
+  profession: "",
+  adresse_rue: "",
+  adresse_code_postal: "",
+  adresse_ville: "",
+  adresse_pays: "France",
+  est_declarant: false,
+};
 
 const Etape2Heritiers = () => {
   const navigate = useNavigate();
@@ -94,14 +134,7 @@ const Etape2Heritiers = () => {
 
   const form = useForm<HeritierFormValues>({
     resolver: zodResolver(heritierSchema),
-    defaultValues: {
-      full_name: "",
-      prenoms: "",
-      lien_parente: "",
-      ordre: "",
-      status: "non_precise",
-      email_notification: "",
-    },
+    defaultValues: defaultFormValues,
   });
 
   const loadHeritiers = useCallback(async (declId: string) => {
@@ -110,7 +143,7 @@ const Etape2Heritiers = () => {
       .select("*")
       .eq("declaration_id", declId)
       .order("ordre", { ascending: true, nullsFirst: false });
-    if (data) setHeritiers(data);
+    if (data) setHeritiers(data as any);
   }, []);
 
   useEffect(() => {
@@ -134,31 +167,38 @@ const Etape2Heritiers = () => {
 
   const openAddDialog = () => {
     setEditingId(null);
-    form.reset({
-      full_name: "",
-      prenoms: "",
-      lien_parente: "",
-      ordre: "",
-      status: "non_precise",
-      email_notification: "",
-    });
+    form.reset(defaultFormValues);
     setDialogOpen(true);
   };
 
   const openEditDialog = (h: Heritier) => {
     setEditingId(h.id);
-    // Extract prenoms from details or split full_name
-    const parts = (h.full_name ?? "").split(" ");
-    const nom = parts[0] ?? "";
-    const prenoms = parts.slice(1).join(" ") ?? "";
+    // Backward-compat: if separate fields are empty, try to split full_name
+    let nom = h.nom_naissance ?? "";
+    let prenoms = h.prenoms ?? "";
+    if (!nom && !prenoms && h.full_name) {
+      const parts = h.full_name.split(" ");
+      nom = parts[0] ?? "";
+      prenoms = parts.slice(1).join(" ");
+    }
     form.reset({
-      full_name: nom,
+      civilite: (h.civilite as "M." | "Mme") ?? (undefined as any),
+      nom_naissance: nom,
+      nom_usage: h.nom_usage ?? "",
       prenoms,
-      birth_date: h.birth_date ? new Date(h.birth_date) : undefined as any,
+      birth_date: h.birth_date ? new Date(h.birth_date) : (undefined as any),
+      lieu_naissance: h.lieu_naissance ?? "",
       lien_parente: h.lien_parente ?? "",
       ordre: h.ordre ?? ("" as any),
       status: h.status ?? "non_precise",
       email_notification: h.email_notification ?? "",
+      telephone: h.telephone ?? "",
+      profession: h.profession ?? "",
+      adresse_rue: h.adresse_rue ?? "",
+      adresse_code_postal: h.adresse_code_postal ?? "",
+      adresse_ville: h.adresse_ville ?? "",
+      adresse_pays: h.adresse_pays ?? "France",
+      est_declarant: !!h.est_declarant,
     });
     setDialogOpen(true);
   };
@@ -167,21 +207,49 @@ const Etape2Heritiers = () => {
     if (!declarationId) return;
     setSaving(true);
 
-    const payload = {
+    const fullName = `${values.nom_naissance} ${values.prenoms}`.trim();
+
+    const payload: Record<string, any> = {
       declaration_id: declarationId,
-      full_name: `${values.full_name} ${values.prenoms}`.trim(),
+      civilite: values.civilite || null,
+      nom_naissance: values.nom_naissance || null,
+      nom_usage: values.nom_usage || null,
+      prenoms: values.prenoms || null,
+      full_name: fullName || null,
       birth_date: values.birth_date ? format(values.birth_date, "yyyy-MM-dd") : null,
+      lieu_naissance: values.lieu_naissance || null,
       lien_parente: values.lien_parente,
       ordre: values.ordre ? Number(values.ordre) : null,
       status: values.status,
       email_notification: values.email_notification || null,
+      telephone: values.telephone || null,
+      profession: values.profession || null,
+      adresse_rue: values.adresse_rue || null,
+      adresse_code_postal: values.adresse_code_postal || null,
+      adresse_ville: values.adresse_ville || null,
+      adresse_pays: values.adresse_pays || null,
+      est_declarant: !!values.est_declarant,
     };
 
     await track(async () => {
+      let savedId = editingId;
       if (editingId) {
-        await supabase.from("heritiers").update(payload).eq("id", editingId);
+        await (supabase.from("heritiers") as any).update(payload).eq("id", editingId);
       } else {
-        await supabase.from("heritiers").insert(payload);
+        const { data: inserted } = await (supabase.from("heritiers") as any)
+          .insert(payload)
+          .select("id")
+          .maybeSingle();
+        savedId = inserted?.id ?? null;
+      }
+
+      // Enforce single declarant: uncheck others if this one is checked
+      if (values.est_declarant && savedId) {
+        await supabase
+          .from("heritiers")
+          .update({ est_declarant: false })
+          .eq("declaration_id", declarationId)
+          .neq("id", savedId);
       }
     });
 
@@ -198,6 +266,12 @@ const Etape2Heritiers = () => {
 
   const handleContinue = async () => {
     if (!declarationId) return;
+    const hasDeclarant = heritiers.some((h) => h.est_declarant);
+    if (!hasDeclarant && heritiers.length > 0) {
+      toast.warning(
+        "Vous n'avez pas désigné l'héritier signataire. Le premier héritier de la liste sera utilisé par défaut."
+      );
+    }
     await supabase
       .from("declarations")
       .update({ current_step: 2 })
@@ -210,6 +284,11 @@ const Etape2Heritiers = () => {
   const allRenounce =
     hasHeritiers && heritiers.every((h) => h.status === "renonce");
   const canContinue = hasHeritiers && !allRenounce;
+
+  const formatAdresse = (h: Heritier) => {
+    const parts = [h.adresse_rue, h.adresse_code_postal, h.adresse_ville].filter(Boolean);
+    return parts.length ? parts.join(", ") : "—";
+  };
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
@@ -234,7 +313,6 @@ const Etape2Heritiers = () => {
         parts ne sera effectué ici.
       </p>
 
-      {/* Alerts */}
       {allRenounce && (
         <Alert variant="destructive" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
@@ -251,32 +329,36 @@ const Etape2Heritiers = () => {
         <div className="space-y-3 mb-6">
           {heritiers.map((h) => (
             <Card key={h.id}>
-              <CardContent className="p-4 flex items-center justify-between gap-4">
+              <CardContent className="p-4 flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{h.full_name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium truncate">
+                      {h.full_name || "(Sans nom)"}
+                    </p>
+                    {h.est_declarant && (
+                      <Badge className="bg-accent text-accent-foreground hover:bg-accent/90">
+                        <PenLine className="h-3 w-3 mr-1" />
+                        Déclarant(e)
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     {h.lien_parente}
                     {h.birth_date &&
                       ` · né(e) le ${format(new Date(h.birth_date), "dd/MM/yyyy")}`}
                   </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    Adresse : {formatAdresse(h)}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {STATUTS.find((s) => s.value === h.status)?.label ??
-                      h.status}
+                    {STATUTS.find((s) => s.value === h.status)?.label ?? h.status}
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(h)}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => openEditDialog(h)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteHeritier(h.id)}
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => deleteHeritier(h.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -331,19 +413,62 @@ const Etape2Heritiers = () => {
               onSubmit={form.handleSubmit(onSubmitHeritier)}
               className="space-y-4 mt-2"
             >
+              {/* Civilité */}
               <FormField
                 control={form.control}
-                name="full_name"
+                name="civilite"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nom complet *</FormLabel>
+                    <FormLabel>Civilité *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Dupont" {...field} />
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex gap-6 mt-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="M." id="h-civ-m" />
+                          <Label htmlFor="h-civ-m" className="cursor-pointer">M.</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="Mme" id="h-civ-mme" />
+                          <Label htmlFor="h-civ-mme" className="cursor-pointer">Mme</Label>
+                        </div>
+                      </RadioGroup>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="nom_naissance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom de naissance *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Dupont" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nom_usage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom d'usage</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Optionnel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -359,24 +484,39 @@ const Etape2Heritiers = () => {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="birth_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date de naissance *</FormLabel>
-                    <FormControl>
-                      <DateInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        max={new Date().toISOString().split("T")[0]}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="birth_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date de naissance *</FormLabel>
+                      <FormControl>
+                        <DateInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          max={new Date().toISOString().split("T")[0]}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lieu_naissance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lieu de naissance</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Paris (75)" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -384,10 +524,7 @@ const Etape2Heritiers = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Lien de parenté avec le défunt *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner" />
@@ -405,6 +542,91 @@ const Etape2Heritiers = () => {
                   </FormItem>
                 )}
               />
+
+              {/* Adresse */}
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Adresse</p>
+                <FormField
+                  control={form.control}
+                  name="adresse_rue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rue / numéro</FormLabel>
+                      <FormControl>
+                        <Input placeholder="12 rue de la Paix" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="adresse_code_postal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code postal</FormLabel>
+                        <FormControl>
+                          <Input placeholder="75002" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="adresse_ville"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ville</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Paris" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="adresse_pays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pays</FormLabel>
+                        <FormControl>
+                          <Input placeholder="France" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="profession"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profession</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Optionnel" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="telephone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="06 12 34 56 78" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -438,14 +660,8 @@ const Etape2Heritiers = () => {
                         className="space-y-2 mt-2"
                       >
                         {STATUTS.map((s) => (
-                          <div
-                            key={s.value}
-                            className="flex items-center space-x-2"
-                          >
-                            <RadioGroupItem
-                              value={s.value}
-                              id={`status-${s.value}`}
-                            />
+                          <div key={s.value} className="flex items-center space-x-2">
+                            <RadioGroupItem value={s.value} id={`status-${s.value}`} />
                             <Label
                               htmlFor={`status-${s.value}`}
                               className="cursor-pointer text-sm"
@@ -483,6 +699,31 @@ const Etape2Heritiers = () => {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="est_declarant"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start space-x-2 rounded-md border p-3 bg-muted/30">
+                      <Checkbox
+                        id="est-declarant"
+                        checked={!!field.value}
+                        onCheckedChange={(c) => field.onChange(!!c)}
+                      />
+                      <div className="space-y-1">
+                        <Label htmlFor="est-declarant" className="cursor-pointer text-sm font-medium">
+                          Cet héritier signera la déclaration de succession
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Un seul héritier peut être désigné signataire — cocher
+                          ici décochera automatiquement les autres.
+                        </p>
+                      </div>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
               <div className="flex justify-end gap-3 pt-2">
                 <Button
                   type="button"
@@ -496,11 +737,7 @@ const Etape2Heritiers = () => {
                   disabled={saving}
                   className="bg-accent text-accent-foreground hover:bg-accent/90"
                 >
-                  {saving
-                    ? "Enregistrement…"
-                    : editingId
-                    ? "Modifier"
-                    : "Ajouter"}
+                  {saving ? "Enregistrement…" : editingId ? "Modifier" : "Ajouter"}
                 </Button>
               </div>
             </form>
