@@ -104,7 +104,9 @@ const Etape4Passif = () => {
     defaultValues: {
       libelle: "",
       type_dette: "",
-      creancier: "",
+      creancier_nom: "",
+      creancier_adresse: "",
+      reference: "",
       montant: "" as any,
       existait_au_deces: "oui",
     },
