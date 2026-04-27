@@ -115,26 +115,13 @@ const Diagnostic = () => {
 
   if (screen === "warning") {
     return (
-      <div className="container mx-auto px-4 py-12 max-w-2xl">
-        <Alert className="border-accent bg-accent/5 mb-8">
-          <AlertTriangle className="h-5 w-5 text-accent" />
-          <AlertTitle className="font-heading text-lg">Attention</AlertTitle>
-          <AlertDescription className="text-muted-foreground leading-relaxed">
-            Votre situation comporte des éléments qui peuvent justifier
-            l'accompagnement d'un professionnel. Vous pouvez continuer en mode
-            dossier préparatoire, mais la validation finale par un notaire est
-            fortement recommandée.
-          </AlertDescription>
-        </Alert>
-        <div className="text-center">
-          <Button
-            size="lg"
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-            onClick={() => navigate("/etape/1")}
-          >
-            Je comprends et je continue
-          </Button>
-        </div>
+      <div className="container mx-auto px-4 py-12 max-w-4xl">
+        <BlocPropositionExpert
+          title="Une analyse experte est conseillée"
+          message="Votre dossier comporte des éléments (immobilier, entreprise, donations complexes…) qui méritent un regard juridique. Vous avez deux options :"
+          onSelectAutonomie={() => navigate("/etape/1")}
+          onSelectNotaire={() => navigate("/")}
+        />
       </div>
     );
   }
