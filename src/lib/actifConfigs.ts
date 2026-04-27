@@ -10,7 +10,7 @@ export const ASSET_TYPES = [
   { key: "entreprise", label: "Entreprise" },
   { key: "assurance_vie", label: "Assurance-vie" },
   { key: "crypto", label: "Crypto-actifs" },
-  { key: "autre", label: "Autres biens" },
+  { key: "autre", label: "Autres biens et créances diverses" },
 ] as const;
 
 export type AssetTypeKey = (typeof ASSET_TYPES)[number]["key"];
