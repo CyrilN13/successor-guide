@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ASSET_TYPES, type AssetTypeKey } from "@/lib/actifConfigs";
+import { calculerDroits } from "@/lib/calcul-droits";
 import { toast } from "sonner";
 
 // ─── Types ───
