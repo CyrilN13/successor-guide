@@ -241,9 +241,9 @@ const Synthese = () => {
         actif_net: actifNet,
         rappel_donations: rappelDonations,
         actif_imposable: actifImposable,
-        estimation_basse: droitsBasse,
-        estimation_moyenne: droitsMoyen,
-        estimation_haute: droitsHaute,
+        estimation_basse: total_droits,
+        estimation_moyenne: total_droits,
+        estimation_haute: total_droits,
         computed_at: new Date().toISOString(),
       },
       { onConflict: "declaration_id" }
