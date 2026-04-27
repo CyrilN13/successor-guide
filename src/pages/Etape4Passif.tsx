@@ -428,12 +428,40 @@ const Etape4Passif = () => {
 
               <FormField
                 control={form.control}
-                name="creancier"
+                name="creancier_nom"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Créancier *</FormLabel>
+                    <FormLabel>Nom du créancier</FormLabel>
                     <FormControl>
                       <Input placeholder="Crédit Mutuel" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="creancier_adresse"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adresse du créancier</FormLabel>
+                    <FormControl>
+                      <Input placeholder="12 rue de la République, 75001 Paris" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="reference"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Référence / numéro de contrat</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex : CR-2024-001234" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
