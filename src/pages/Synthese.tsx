@@ -409,8 +409,8 @@ const Synthese = () => {
     [
       `Actif net : ${fmtEuro(actifNet)}`,
       `Actif imposable : ${fmtEuro(actifImposable)}`,
-      `Fourchette estimative des droits : ${fmtEuro(droitsBasse)} – ${fmtEuro(droitsHaute)}`,
-      `(basse 4 % / moyenne 5 % / haute 6 %)`,
+      `Droits estimés (total) : ${fmtEuro(total_droits)}`,
+      hors_periphere ? `(estimation indisponible — ${result.reason_hors_perimetre ?? "hors périmètre"})` : `(calcul par héritier — voir tableau)`,
     ].forEach((l) => {
       doc.text(l, 14, yy);
       yy += 5;
