@@ -167,7 +167,9 @@ const Etape4Passif = () => {
     form.reset({
       libelle: item.libelle ?? "",
       type_dette: item.type_dette ?? "",
-      creancier: (details.creancier as string) ?? "",
+      creancier_nom: item.creancier_nom ?? (details.creancier as string) ?? "",
+      creancier_adresse: item.creancier_adresse ?? "",
+      reference: item.reference ?? "",
       montant: (item.montant ?? "") as any,
       existait_au_deces: item.existait_au_deces ?? "oui",
       date_origine: details.date_origine
