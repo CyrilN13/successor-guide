@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ASSET_TYPES, type AssetTypeKey } from "@/lib/actifConfigs";
+import { calculerDroits } from "@/lib/calcul-droits";
 import { toast } from "sonner";
 
 // ─── Types ───
@@ -150,14 +151,12 @@ const Synthese = () => {
 
   const actifBrut = actifs.reduce((s, i) => s + Number(i.valeur_estimee || 0), 0);
   const passifTotal = passifs.reduce((s, i) => s + Number(i.montant || 0), 0);
-  const actifNet = actifBrut - passifTotal;
   const rappelDonations = donations
     .filter((d) => d.dans_15_ans)
     .reduce((s, d) => s + Number(d.montant || 0), 0);
-  const actifImposable = actifNet + rappelDonations;
-  const droitsBasse = Math.max(0, actifImposable * 0.04);
-  const droitsMoyen = Math.max(0, actifImposable * 0.05);
-  const droitsHaute = Math.max(0, actifImposable * 0.06);
+
+  const result = calculerDroits(actifBrut, passifTotal, rappelDonations, heritiers as any[]);
+  const { actif_net: actifNet, actif_imposable: actifImposable, par_heritier, total_droits, hors_periphere } = result;
 
   // ─── Alerts ───
   const alerts: { icon: typeof AlertTriangle; message: string }[] = [];
@@ -242,9 +241,9 @@ const Synthese = () => {
         actif_net: actifNet,
         rappel_donations: rappelDonations,
         actif_imposable: actifImposable,
-        estimation_basse: droitsBasse,
-        estimation_moyenne: droitsMoyen,
-        estimation_haute: droitsHaute,
+        estimation_basse: total_droits,
+        estimation_moyenne: total_droits,
+        estimation_haute: total_droits,
         computed_at: new Date().toISOString(),
       },
       { onConflict: "declaration_id" }
@@ -277,9 +276,7 @@ const Synthese = () => {
     actifNet,
     rappelDonations,
     actifImposable,
-    droitsBasse,
-    droitsMoyen,
-    droitsHaute,
+    total_droits,
   ]);
 
   // ─── Edge function CERFA download ───
@@ -412,8 +409,8 @@ const Synthese = () => {
     [
       `Actif net : ${fmtEuro(actifNet)}`,
       `Actif imposable : ${fmtEuro(actifImposable)}`,
-      `Fourchette estimative des droits : ${fmtEuro(droitsBasse)} – ${fmtEuro(droitsHaute)}`,
-      `(basse 4 % / moyenne 5 % / haute 6 %)`,
+      `Droits estimés (total) : ${fmtEuro(total_droits)}`,
+      hors_periphere ? `(estimation indisponible — ${result.reason_hors_perimetre ?? "hors périmètre"})` : `(calcul par héritier — voir tableau)`,
     ].forEach((l) => {
       doc.text(l, 14, yy);
       yy += 5;
@@ -760,24 +757,73 @@ const Synthese = () => {
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-md bg-primary p-5 text-primary-foreground">
-            <div className="text-sm opacity-80">Fourchette estimative des droits</div>
-            <div className="mt-1 text-2xl font-semibold">
-              entre {fmtEuro(droitsBasse)} et {fmtEuro(droitsHaute)}
-            </div>
-            <div className="mt-1 text-xs opacity-80">
-              basse 4 % · moyenne {fmtEuro(droitsMoyen)} (5 %) · haute 6 %
-            </div>
-          </div>
-          <Alert className="mt-4 border-accent bg-accent/5">
-            <Info className="h-5 w-5 text-accent" />
-            <AlertDescription className="text-base font-medium text-foreground">
-              Cette estimation est <strong>indicative</strong> et ne tient pas compte des
-              abattements individuels par héritier, des exonérations spécifiques (conjoint
-              survivant, partenaire PACS…) ni des réductions pour charge de famille. Le
-              calcul officiel est réalisé par la DGFIP.
-            </AlertDescription>
-          </Alert>
+          {hors_periphere ? (
+            <Alert className="mt-4">
+              <Info className="h-5 w-5" />
+              <AlertDescription className="text-base">
+                Votre situation comporte des éléments qui rendent le calcul automatique
+                imprécis. Nous indiquons l'actif imposable mais pas l'estimation des droits.
+                Pour un calcul fiable, consultez un professionnel ou attendez le calcul de
+                la DGFIP.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="mt-4 overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Héritier (lien)</TableHead>
+                      <TableHead className="text-right">Part brute</TableHead>
+                      <TableHead className="text-right">Abattement</TableHead>
+                      <TableHead className="text-right">Base imposable</TableHead>
+                      <TableHead className="text-right">Droits estimés</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {par_heritier.map((p, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          {p.nom}
+                          <span className="text-muted-foreground"> ({p.lien})</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.part_brute.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.abattement.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {p.base_imposable.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {p.exonere
+                            ? "EXONÉRÉ(E)"
+                            : `${p.droits.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €`}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-right font-bold">
+                        Total des droits estimés
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {total_droits.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} €
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+              <Alert className="mt-4 border-accent bg-accent/5">
+                <Info className="h-5 w-5 text-accent" />
+                <AlertDescription className="text-base font-medium text-foreground">
+                  Cette estimation suppose une répartition à parts égales entre héritiers
+                  acceptants. Elle n'inclut pas les exonérations spécifiques (transmission
+                  d'entreprise, etc.). Le calcul officiel est réalisé par la DGFIP.
+                </AlertDescription>
+              </Alert>
+            </>
+          )}
         </CardContent>
       </Card>
 
