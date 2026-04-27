@@ -79,6 +79,9 @@ interface PassifItem {
   justificatif_url: string | null;
   declaration_id: string | null;
   details: Record<string, any> | null;
+  creancier_nom: string | null;
+  creancier_adresse: string | null;
+  reference: string | null;
 }
 
 const formatEur = (n: number) =>
