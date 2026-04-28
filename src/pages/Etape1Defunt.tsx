@@ -41,19 +41,6 @@ import {
 } from "@/components/ui/form";
 import { DEPARTEMENTS_FR } from "@/lib/departementsFR";
 
-const NATIONALITES = [
-  "Française",
-  "Allemande",
-  "Belge",
-  "Britannique",
-  "Espagnole",
-  "Italienne",
-  "Luxembourgeoise",
-  "Portugaise",
-  "Suisse",
-  "Autre",
-];
-
 const SITUATIONS_MATRIMONIALES = [
   "Célibataire",
   "Marié(e)",
