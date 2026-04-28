@@ -177,12 +177,19 @@ const Synthese = () => {
       }
       setDeclarationId(declId);
 
-      const [d, h, a, p, don] = await Promise.all([
+      const [d, h, a, p, don, declRow] = await Promise.all([
         supabase.from("defunts").select("*").eq("declaration_id", declId).maybeSingle(),
         supabase.from("heritiers").select("*").eq("declaration_id", declId).order("ordre"),
         supabase.from("actif_items").select("*").eq("declaration_id", declId),
         supabase.from("passif_items").select("*").eq("declaration_id", declId),
         supabase.from("donations").select("*").eq("declaration_id", declId),
+        supabase
+          .from("declarations")
+          .select(
+            "obs_pas_de_creance,obs_pas_de_donation,obs_pas_d_inventaire,obs_forfait_mobilier_5pct,obs_inventaire_joint,obs_meubles_neant",
+          )
+          .eq("id", declId)
+          .maybeSingle(),
       ]);
 
       if (d.data) setDefunt(d.data as unknown as Defunt);
@@ -190,6 +197,17 @@ const Synthese = () => {
       if (a.data) setActifs(a.data as unknown as ActifItem[]);
       if (p.data) setPassifs(p.data as unknown as PassifItem[]);
       if (don.data) setDonations(don.data as unknown as Donation[]);
+      if (declRow.data) {
+        const r = declRow.data as Record<string, any>;
+        setObs({
+          obs_pas_de_creance: r.obs_pas_de_creance ?? true,
+          obs_pas_de_donation: r.obs_pas_de_donation ?? true,
+          obs_pas_d_inventaire: r.obs_pas_d_inventaire ?? true,
+          obs_forfait_mobilier_5pct: r.obs_forfait_mobilier_5pct ?? true,
+          obs_inventaire_joint: r.obs_inventaire_joint ?? false,
+          obs_meubles_neant: r.obs_meubles_neant ?? false,
+        });
+      }
       setLoading(false);
     })();
   }, [navigate]);
