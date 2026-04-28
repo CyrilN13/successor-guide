@@ -249,6 +249,16 @@ const Etape2Heritiers = () => {
       adresse_ville: h.adresse_ville ?? "",
       adresse_pays: h.adresse_pays ?? "France",
       est_declarant: !!h.est_declarant,
+      situation_matrimoniale: h.situation_matrimoniale ?? "",
+      conjoint_civilite: h.conjoint_civilite ?? "",
+      conjoint_nom_naissance: h.conjoint_nom_naissance ?? "",
+      conjoint_prenoms: h.conjoint_prenoms ?? "",
+      date_mariage: h.date_mariage ? new Date(h.date_mariage) : undefined,
+      lieu_mariage: h.lieu_mariage ?? "",
+      regime_matrimonial: h.regime_matrimonial ?? "",
+      regime_modifie: !!h.regime_modifie,
+      nationalite: h.nationalite ?? "française",
+      resident_fiscal_france: h.resident_fiscal_france ?? true,
     });
     setDialogOpen(true);
   };
