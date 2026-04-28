@@ -1287,6 +1287,127 @@ const Synthese = () => {
           Retour à l'accueil
         </Button>
       </div>
+
+      {/* ─── Modale assurance-vie : informations légales ─── */}
+      <Dialog open={avDialogOpen} onOpenChange={setAvDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Informations légales — assurance-vie</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="av-comp">Nom de la compagnie d'assurance</Label>
+              <Input
+                id="av-comp"
+                value={avForm.av_compagnie}
+                onChange={(e) =>
+                  setAvForm((f) => ({ ...f, av_compagnie: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="av-adr">Adresse de la compagnie</Label>
+              <Textarea
+                id="av-adr"
+                rows={3}
+                value={avForm.av_adresse_compagnie}
+                onChange={(e) =>
+                  setAvForm((f) => ({
+                    ...f,
+                    av_adresse_compagnie: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="av-pol">Numéro de police</Label>
+                <Input
+                  id="av-pol"
+                  value={avForm.av_numero_police}
+                  onChange={(e) =>
+                    setAvForm((f) => ({
+                      ...f,
+                      av_numero_police: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="av-date">Date de souscription</Label>
+                <Input
+                  id="av-date"
+                  type="date"
+                  value={avForm.av_date_souscription}
+                  onChange={(e) =>
+                    setAvForm((f) => ({
+                      ...f,
+                      av_date_souscription: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="av-70"
+                checked={avForm.av_souscrite_apres_70_ans}
+                onCheckedChange={(c) =>
+                  setAvForm((f) => ({
+                    ...f,
+                    av_souscrite_apres_70_ans: c === true,
+                    av_primes_apres_70_ans:
+                      c === true ? f.av_primes_apres_70_ans : "",
+                  }))
+                }
+                className="mt-1"
+              />
+              <Label htmlFor="av-70" className="cursor-pointer font-normal">
+                Le contrat a été souscrit après le 70ème anniversaire du défunt
+              </Label>
+            </div>
+            {avForm.av_souscrite_apres_70_ans && (
+              <div className="space-y-1">
+                <Label htmlFor="av-primes">
+                  Montant des primes versées après 70 ans (€)
+                </Label>
+                <Input
+                  id="av-primes"
+                  type="number"
+                  step="0.01"
+                  value={avForm.av_primes_apres_70_ans}
+                  onChange={(e) =>
+                    setAvForm((f) => ({
+                      ...f,
+                      av_primes_apres_70_ans: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            )}
+            <Alert className="border-blue-300 bg-blue-50 text-blue-900">
+              <Info className="h-4 w-4 text-blue-700" />
+              <AlertDescription className="text-sm">
+                Si les primes versées après 70 ans dépassent 30 500 €, l'excédent
+                est taxable au titre de l'article 757 B du CGI. La déclaration
+                mentionnera automatiquement cet article.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAvDialogOpen(false)}
+              disabled={avSaving}
+            >
+              Annuler
+            </Button>
+            <Button onClick={saveAvDialog} disabled={avSaving}>
+              {avSaving ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
