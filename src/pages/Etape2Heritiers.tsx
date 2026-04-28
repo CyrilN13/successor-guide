@@ -58,6 +58,22 @@ const STATUTS = [
   { value: "non_precise", label: "Je n'ai pas encore décidé" },
 ];
 
+const SITUATIONS_MATRIMONIALES = [
+  { value: "celibataire", label: "Célibataire" },
+  { value: "marie", label: "Marié(e)" },
+  { value: "pacse", label: "Pacsé(e)" },
+  { value: "divorce", label: "Divorcé(e)" },
+  { value: "veuf", label: "Veuf(ve)" },
+];
+
+const REGIMES_MATRIMONIAUX = [
+  "Communauté d'acquêts à défaut de contrat préalable",
+  "Communauté universelle",
+  "Séparation de biens",
+  "Participation aux acquêts",
+  "Autre",
+];
+
 const heritierSchema = z.object({
   civilite: z.enum(["M.", "Mme"], { required_error: "La civilité est requise" }),
   nom_naissance: z.string().trim().min(1, "Le nom de naissance est requis").max(100),
@@ -76,6 +92,20 @@ const heritierSchema = z.object({
   adresse_ville: z.string().trim().max(100).optional().or(z.literal("")),
   adresse_pays: z.string().trim().max(100).optional().or(z.literal("")),
   est_declarant: z.boolean().default(false),
+
+  // Situation matrimoniale
+  situation_matrimoniale: z.string().min(1, "La situation matrimoniale est requise"),
+  conjoint_civilite: z.string().optional().or(z.literal("")),
+  conjoint_nom_naissance: z.string().trim().max(100).optional().or(z.literal("")),
+  conjoint_prenoms: z.string().trim().max(200).optional().or(z.literal("")),
+  date_mariage: z.date().optional(),
+  lieu_mariage: z.string().trim().max(200).optional().or(z.literal("")),
+  regime_matrimonial: z.string().optional().or(z.literal("")),
+  regime_modifie: z.boolean().default(false),
+
+  // Identité administrative
+  nationalite: z.string().trim().min(1, "La nationalité est requise").max(100),
+  resident_fiscal_france: z.boolean().default(true),
 });
 
 type HeritierFormValues = z.infer<typeof heritierSchema>;
