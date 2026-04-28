@@ -289,6 +289,16 @@ const Etape2Heritiers = () => {
       adresse_ville: values.adresse_ville || null,
       adresse_pays: values.adresse_pays || null,
       est_declarant: !!values.est_declarant,
+      situation_matrimoniale: values.situation_matrimoniale || null,
+      conjoint_civilite: showConjointFields(values.situation_matrimoniale) ? (values.conjoint_civilite || null) : null,
+      conjoint_nom_naissance: showConjointFields(values.situation_matrimoniale) ? (values.conjoint_nom_naissance || null) : null,
+      conjoint_prenoms: showConjointFields(values.situation_matrimoniale) ? (values.conjoint_prenoms || null) : null,
+      date_mariage: values.situation_matrimoniale === "marie" && values.date_mariage ? format(values.date_mariage, "yyyy-MM-dd") : null,
+      lieu_mariage: values.situation_matrimoniale === "marie" ? (values.lieu_mariage || null) : null,
+      regime_matrimonial: showConjointFields(values.situation_matrimoniale) ? (values.regime_matrimonial || null) : null,
+      regime_modifie: showConjointFields(values.situation_matrimoniale) ? !!values.regime_modifie : false,
+      nationalite: values.nationalite || null,
+      resident_fiscal_france: !!values.resident_fiscal_france,
     };
 
     await track(async () => {
