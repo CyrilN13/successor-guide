@@ -21,6 +21,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -54,6 +66,12 @@ interface ActifItem {
   libelle: string | null;
   valeur_estimee: number | null;
   details: Record<string, any> | null;
+  av_compagnie?: string | null;
+  av_adresse_compagnie?: string | null;
+  av_numero_police?: string | null;
+  av_date_souscription?: string | null;
+  av_souscrite_apres_70_ans?: boolean | null;
+  av_primes_apres_70_ans?: number | null;
 }
 interface PassifItem {
   id: string;
@@ -72,6 +90,17 @@ interface Donation {
   dans_15_ans: boolean | null;
   enregistree_fiscalement: boolean | null;
 }
+
+interface Observations {
+  obs_pas_de_creance: boolean;
+  obs_pas_de_donation: boolean;
+  obs_pas_d_inventaire: boolean;
+  obs_forfait_mobilier_5pct: boolean;
+  obs_inventaire_joint: boolean;
+  obs_meubles_neant: boolean;
+}
+
+type InventaireChoice = "forfait" | "joint" | "neant";
 
 const fmtEuro = (n: number) =>
   new Intl.NumberFormat("fr-FR", {
@@ -95,6 +124,29 @@ const Synthese = () => {
   const [actifs, setActifs] = useState<ActifItem[]>([]);
   const [passifs, setPassifs] = useState<PassifItem[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
+
+  // ─── Observations préliminaires ───
+  const [obs, setObs] = useState<Observations>({
+    obs_pas_de_creance: true,
+    obs_pas_de_donation: true,
+    obs_pas_d_inventaire: true,
+    obs_forfait_mobilier_5pct: true,
+    obs_inventaire_joint: false,
+    obs_meubles_neant: false,
+  });
+
+  // ─── Modale assurance-vie : informations légales ───
+  const [avDialogOpen, setAvDialogOpen] = useState(false);
+  const [avEditing, setAvEditing] = useState<ActifItem | null>(null);
+  const [avSaving, setAvSaving] = useState(false);
+  const [avForm, setAvForm] = useState({
+    av_compagnie: "",
+    av_adresse_compagnie: "",
+    av_numero_police: "",
+    av_date_souscription: "",
+    av_souscrite_apres_70_ans: false,
+    av_primes_apres_70_ans: "",
+  });
 
   // ─── Load all data ───
   useEffect(() => {
@@ -125,12 +177,19 @@ const Synthese = () => {
       }
       setDeclarationId(declId);
 
-      const [d, h, a, p, don] = await Promise.all([
+      const [d, h, a, p, don, declRow] = await Promise.all([
         supabase.from("defunts").select("*").eq("declaration_id", declId).maybeSingle(),
         supabase.from("heritiers").select("*").eq("declaration_id", declId).order("ordre"),
         supabase.from("actif_items").select("*").eq("declaration_id", declId),
         supabase.from("passif_items").select("*").eq("declaration_id", declId),
         supabase.from("donations").select("*").eq("declaration_id", declId),
+        supabase
+          .from("declarations")
+          .select(
+            "obs_pas_de_creance,obs_pas_de_donation,obs_pas_d_inventaire,obs_forfait_mobilier_5pct,obs_inventaire_joint,obs_meubles_neant",
+          )
+          .eq("id", declId)
+          .maybeSingle(),
       ]);
 
       if (d.data) setDefunt(d.data as unknown as Defunt);
@@ -138,9 +197,110 @@ const Synthese = () => {
       if (a.data) setActifs(a.data as unknown as ActifItem[]);
       if (p.data) setPassifs(p.data as unknown as PassifItem[]);
       if (don.data) setDonations(don.data as unknown as Donation[]);
+      if (declRow.data) {
+        const r = declRow.data as Record<string, any>;
+        setObs({
+          obs_pas_de_creance: r.obs_pas_de_creance ?? true,
+          obs_pas_de_donation: r.obs_pas_de_donation ?? true,
+          obs_pas_d_inventaire: r.obs_pas_d_inventaire ?? true,
+          obs_forfait_mobilier_5pct: r.obs_forfait_mobilier_5pct ?? true,
+          obs_inventaire_joint: r.obs_inventaire_joint ?? false,
+          obs_meubles_neant: r.obs_meubles_neant ?? false,
+        });
+      }
       setLoading(false);
     })();
   }, [navigate]);
+
+  // ─── Auto-uncheck "pas de donation" si des donations sont déclarées ───
+  useEffect(() => {
+    if (!declarationId) return;
+    if (donations.length > 0 && obs.obs_pas_de_donation) {
+      setObs((o) => ({ ...o, obs_pas_de_donation: false }));
+      void supabase
+        .from("declarations")
+        .update({ obs_pas_de_donation: false } as any)
+        .eq("id", declarationId);
+    }
+  }, [donations.length, declarationId, obs.obs_pas_de_donation]);
+
+  // ─── Persist a single observation column ───
+  const updateObs = useCallback(
+    async (patch: Partial<Observations>) => {
+      setObs((o) => ({ ...o, ...patch }));
+      if (!declarationId) return;
+      const { error } = await (supabase.from("declarations") as any)
+        .update(patch)
+        .eq("id", declarationId);
+      if (error) toast.error("Erreur d'enregistrement : " + error.message);
+    },
+    [declarationId],
+  );
+
+  // ─── Inventaire : choix radio ───
+  const inventaireChoice: InventaireChoice | null = obs.obs_forfait_mobilier_5pct
+    ? "forfait"
+    : obs.obs_inventaire_joint
+    ? "joint"
+    : obs.obs_meubles_neant
+    ? "neant"
+    : null;
+
+  const setInventaireChoice = (choice: InventaireChoice) => {
+    void updateObs({
+      obs_forfait_mobilier_5pct: choice === "forfait",
+      obs_inventaire_joint: choice === "joint",
+      obs_meubles_neant: choice === "neant",
+      // si un inventaire est joint, alors un inventaire a été dressé
+      obs_pas_d_inventaire: choice !== "joint",
+    });
+  };
+
+  // ─── Modale assurance-vie ───
+  const openAvDialog = (a: ActifItem) => {
+    setAvEditing(a);
+    setAvForm({
+      av_compagnie: a.av_compagnie ?? "",
+      av_adresse_compagnie: a.av_adresse_compagnie ?? "",
+      av_numero_police: a.av_numero_police ?? "",
+      av_date_souscription: a.av_date_souscription ?? "",
+      av_souscrite_apres_70_ans: a.av_souscrite_apres_70_ans ?? false,
+      av_primes_apres_70_ans:
+        a.av_primes_apres_70_ans !== null && a.av_primes_apres_70_ans !== undefined
+          ? String(a.av_primes_apres_70_ans)
+          : "",
+    });
+    setAvDialogOpen(true);
+  };
+
+  const saveAvDialog = async () => {
+    if (!avEditing) return;
+    setAvSaving(true);
+    const payload: Record<string, any> = {
+      av_compagnie: avForm.av_compagnie || null,
+      av_adresse_compagnie: avForm.av_adresse_compagnie || null,
+      av_numero_police: avForm.av_numero_police || null,
+      av_date_souscription: avForm.av_date_souscription || null,
+      av_souscrite_apres_70_ans: avForm.av_souscrite_apres_70_ans,
+      av_primes_apres_70_ans: avForm.av_souscrite_apres_70_ans
+        ? Number(avForm.av_primes_apres_70_ans) || null
+        : null,
+    };
+    const { error } = await (supabase.from("actif_items") as any)
+      .update(payload)
+      .eq("id", avEditing.id);
+    setAvSaving(false);
+    if (error) {
+      toast.error("Erreur d'enregistrement : " + error.message);
+      return;
+    }
+    setActifs((prev) =>
+      prev.map((it) => (it.id === avEditing.id ? { ...it, ...payload } : it)),
+    );
+    toast.success("Informations enregistrées");
+    setAvDialogOpen(false);
+    setAvEditing(null);
+  };
 
   // ─── Calculations ───
   const actifsByType = ASSET_TYPES.map((t) => {
@@ -739,11 +899,179 @@ const Synthese = () => {
         </Card>
       )}
 
-      {/* Section 6 — Estimation fiscale */}
+      {/* Section 6 — Observations préliminaires */}
+      <Card className="mb-6">
+        <CardContent className="p-6 space-y-6">
+          <h2 className="font-serif text-xl font-semibold text-primary">
+            6. Observations préliminaires
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Ces déclarations seront reportées dans les mentions légales du formulaire
+            CERFA 2705-SD. Décochez ou modifiez celles qui ne correspondent pas à votre
+            situation.
+          </p>
+
+          {/* 1. Aucune créance */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="obs-creance"
+                checked={obs.obs_pas_de_creance}
+                onCheckedChange={(c) =>
+                  updateObs({ obs_pas_de_creance: c === true })
+                }
+                className="mt-1"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="obs-creance" className="cursor-pointer font-medium">
+                  Aucune créance d'aide ou d'assistance à faire valoir contre la
+                  succession
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Cocher si personne ne réclame de remboursement pour avoir aidé le
+                  défunt (proche aidant, EHPAD, ami…).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Aucune donation */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="obs-donation"
+                checked={obs.obs_pas_de_donation}
+                disabled={donations.length > 0}
+                onCheckedChange={(c) =>
+                  updateObs({ obs_pas_de_donation: c === true })
+                }
+                className="mt-1"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="obs-donation" className="cursor-pointer font-medium">
+                  Le défunt n'a consenti aucune donation antérieurement
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Si vous avez déclaré des donations à l'étape 5, décochez cette case.
+                </p>
+              </div>
+            </div>
+            {donations.length > 0 && (
+              <Alert className="border-yellow-400 bg-yellow-50 text-yellow-900">
+                <AlertTriangle className="h-4 w-4 text-yellow-700" />
+                <AlertDescription className="text-sm">
+                  Vous avez déclaré des donations antérieures. La mention « absence de
+                  donation » n'est plus possible.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          {/* 3 + 4. Inventaire */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="obs-inventaire"
+                checked={obs.obs_pas_d_inventaire}
+                onCheckedChange={(c) =>
+                  updateObs({
+                    obs_pas_d_inventaire: c === true,
+                    // si on coche "aucun inventaire dressé", forcer "inventaire joint" à false
+                    obs_inventaire_joint:
+                      c === true ? false : obs.obs_inventaire_joint,
+                  })
+                }
+                className="mt-1"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="obs-inventaire" className="cursor-pointer font-medium">
+                  Aucun inventaire n'a été dressé à la suite du décès
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Le forfait mobilier 5 % est l'option la plus courante. Il évite de
+                  faire dresser un inventaire.
+                </p>
+              </div>
+            </div>
+
+            <div className="ml-7 rounded-md border border-border bg-muted/30 p-4">
+              <RadioGroup
+                value={inventaireChoice ?? ""}
+                onValueChange={(v) => setInventaireChoice(v as InventaireChoice)}
+                className="space-y-2"
+              >
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="forfait" id="inv-forfait" className="mt-1" />
+                  <Label htmlFor="inv-forfait" className="cursor-pointer font-normal">
+                    Application du forfait mobilier 5 %
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="joint" id="inv-joint" className="mt-1" />
+                  <Label htmlFor="inv-joint" className="cursor-pointer font-normal">
+                    Un inventaire est joint à la déclaration
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="neant" id="inv-neant" className="mt-1" />
+                  <Label htmlFor="inv-neant" className="cursor-pointer font-normal">
+                    Le défunt ne possédait aucun meuble meublant ni objet mobilier
+                    (hors garde-robe)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+
+          {/* 5. Assurances-vie : compléter informations légales */}
+          {actifs.filter((a) => a.type_bien === "assurance_vie").length > 0 && (
+            <div className="space-y-2 rounded-md border border-border p-4">
+              <h3 className="font-medium text-primary">
+                Informations légales — assurance-vie
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Complétez les informations légales nécessaires à la mention dans la
+                déclaration et, le cas échéant, à l'annexe CERFA 2705-A-SD.
+              </p>
+              <ul className="mt-2 space-y-2">
+                {actifs
+                  .filter((a) => a.type_bien === "assurance_vie")
+                  .map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-background p-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {a.libelle ?? "Contrat d'assurance-vie"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {a.av_compagnie
+                            ? `${a.av_compagnie} · `
+                            : ""}
+                          {fmtEuro(Number(a.valeur_estimee || 0))}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openAvDialog(a)}
+                      >
+                        Compléter les informations légales
+                      </Button>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 7 — Estimation fiscale */}
       <Card className="mb-6 border-accent">
         <CardContent className="p-6">
           <h2 className="mb-4 font-serif text-xl font-semibold text-primary">
-            6. Estimation fiscale
+            7. Estimation fiscale
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-md border border-border p-4">
@@ -827,12 +1155,12 @@ const Synthese = () => {
         </CardContent>
       </Card>
 
-      {/* Section 7 — Alertes */}
+      {/* Section 8 — Alertes */}
       {alerts.length > 0 && (
         <Card className="mb-6">
           <CardContent className="p-6">
             <h2 className="mb-4 font-serif text-xl font-semibold text-primary">
-              7. Alertes
+              8. Alertes
             </h2>
             <div className="space-y-3">
               {alerts.map((a, i) => (
@@ -846,11 +1174,11 @@ const Synthese = () => {
         </Card>
       )}
 
-      {/* Section 8 — Checklist */}
+      {/* Section 9 — Checklist */}
       <Card className="mb-6">
         <CardContent className="p-6">
           <h2 className="mb-4 font-serif text-xl font-semibold text-primary">
-            8. Pièces à réunir
+            9. Pièces à réunir
           </h2>
           <ul className="space-y-2 text-sm">
             {checklist.map((c, i) => (
@@ -959,6 +1287,127 @@ const Synthese = () => {
           Retour à l'accueil
         </Button>
       </div>
+
+      {/* ─── Modale assurance-vie : informations légales ─── */}
+      <Dialog open={avDialogOpen} onOpenChange={setAvDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Informations légales — assurance-vie</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="av-comp">Nom de la compagnie d'assurance</Label>
+              <Input
+                id="av-comp"
+                value={avForm.av_compagnie}
+                onChange={(e) =>
+                  setAvForm((f) => ({ ...f, av_compagnie: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="av-adr">Adresse de la compagnie</Label>
+              <Textarea
+                id="av-adr"
+                rows={3}
+                value={avForm.av_adresse_compagnie}
+                onChange={(e) =>
+                  setAvForm((f) => ({
+                    ...f,
+                    av_adresse_compagnie: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="av-pol">Numéro de police</Label>
+                <Input
+                  id="av-pol"
+                  value={avForm.av_numero_police}
+                  onChange={(e) =>
+                    setAvForm((f) => ({
+                      ...f,
+                      av_numero_police: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="av-date">Date de souscription</Label>
+                <Input
+                  id="av-date"
+                  type="date"
+                  value={avForm.av_date_souscription}
+                  onChange={(e) =>
+                    setAvForm((f) => ({
+                      ...f,
+                      av_date_souscription: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="av-70"
+                checked={avForm.av_souscrite_apres_70_ans}
+                onCheckedChange={(c) =>
+                  setAvForm((f) => ({
+                    ...f,
+                    av_souscrite_apres_70_ans: c === true,
+                    av_primes_apres_70_ans:
+                      c === true ? f.av_primes_apres_70_ans : "",
+                  }))
+                }
+                className="mt-1"
+              />
+              <Label htmlFor="av-70" className="cursor-pointer font-normal">
+                Le contrat a été souscrit après le 70ème anniversaire du défunt
+              </Label>
+            </div>
+            {avForm.av_souscrite_apres_70_ans && (
+              <div className="space-y-1">
+                <Label htmlFor="av-primes">
+                  Montant des primes versées après 70 ans (€)
+                </Label>
+                <Input
+                  id="av-primes"
+                  type="number"
+                  step="0.01"
+                  value={avForm.av_primes_apres_70_ans}
+                  onChange={(e) =>
+                    setAvForm((f) => ({
+                      ...f,
+                      av_primes_apres_70_ans: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            )}
+            <Alert className="border-blue-300 bg-blue-50 text-blue-900">
+              <Info className="h-4 w-4 text-blue-700" />
+              <AlertDescription className="text-sm">
+                Si les primes versées après 70 ans dépassent 30 500 €, l'excédent
+                est taxable au titre de l'article 757 B du CGI. La déclaration
+                mentionnera automatiquement cet article.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAvDialogOpen(false)}
+              disabled={avSaving}
+            >
+              Annuler
+            </Button>
+            <Button onClick={saveAvDialog} disabled={avSaving}>
+              {avSaving ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
