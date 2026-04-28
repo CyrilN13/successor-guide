@@ -62,7 +62,23 @@ interface ActifItem {
   valeur_estimee: number | null;
   details: Record<string, any> | null;
   declaration_id: string | null;
+  banque_nom?: string | null;
+  banque_adresse?: string | null;
+  numero_compte?: string | null;
+  type_compte_precis?: string | null;
+  detenu_en_indivision?: boolean | null;
+  quote_part_pct?: number | null;
 }
+
+// Top-level columns persisted on actif_items (vs JSON in details)
+const COMPTE_TOP_LEVEL_FIELDS = [
+  "banque_nom",
+  "banque_adresse",
+  "numero_compte",
+  "type_compte_precis",
+  "detenu_en_indivision",
+  "quote_part_pct",
+] as const;
 
 const formatEur = (n: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
