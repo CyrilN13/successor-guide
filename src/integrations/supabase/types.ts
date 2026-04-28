@@ -182,6 +182,7 @@ export type Database = {
           adresse_ville: string | null
           birth_date: string | null
           civilite: string | null
+          commune_naissance: string | null
           conjoint_civilite: string | null
           conjoint_date_naissance: string | null
           conjoint_lieu_naissance: string | null
@@ -199,9 +200,13 @@ export type Database = {
           domicile: string | null
           full_name: string | null
           id: string
+          lieu_deces_code_postal: string | null
+          lieu_deces_pays: string | null
+          lieu_deces_ville: string | null
           lieu_mariage: string | null
           marital_status: string | null
           matrimonial_regime: string | null
+          nationalite: string | null
           nationality: string | null
           nom_naissance: string | null
           nom_usage: string | null
@@ -209,6 +214,10 @@ export type Database = {
           pre_rempli_fields: Json
           prenoms: string | null
           profession: string | null
+          resident_fiscal_france: boolean | null
+          testament_date: string | null
+          testament_existe: boolean | null
+          testament_lieu_depot: string | null
         }
         Insert: {
           adresse_code_postal?: string | null
@@ -217,6 +226,7 @@ export type Database = {
           adresse_ville?: string | null
           birth_date?: string | null
           civilite?: string | null
+          commune_naissance?: string | null
           conjoint_civilite?: string | null
           conjoint_date_naissance?: string | null
           conjoint_lieu_naissance?: string | null
@@ -234,9 +244,13 @@ export type Database = {
           domicile?: string | null
           full_name?: string | null
           id?: string
+          lieu_deces_code_postal?: string | null
+          lieu_deces_pays?: string | null
+          lieu_deces_ville?: string | null
           lieu_mariage?: string | null
           marital_status?: string | null
           matrimonial_regime?: string | null
+          nationalite?: string | null
           nationality?: string | null
           nom_naissance?: string | null
           nom_usage?: string | null
@@ -244,6 +258,10 @@ export type Database = {
           pre_rempli_fields?: Json
           prenoms?: string | null
           profession?: string | null
+          resident_fiscal_france?: boolean | null
+          testament_date?: string | null
+          testament_existe?: boolean | null
+          testament_lieu_depot?: string | null
         }
         Update: {
           adresse_code_postal?: string | null
@@ -252,6 +270,7 @@ export type Database = {
           adresse_ville?: string | null
           birth_date?: string | null
           civilite?: string | null
+          commune_naissance?: string | null
           conjoint_civilite?: string | null
           conjoint_date_naissance?: string | null
           conjoint_lieu_naissance?: string | null
@@ -269,9 +288,13 @@ export type Database = {
           domicile?: string | null
           full_name?: string | null
           id?: string
+          lieu_deces_code_postal?: string | null
+          lieu_deces_pays?: string | null
+          lieu_deces_ville?: string | null
           lieu_mariage?: string | null
           marital_status?: string | null
           matrimonial_regime?: string | null
+          nationalite?: string | null
           nationality?: string | null
           nom_naissance?: string | null
           nom_usage?: string | null
@@ -279,6 +302,10 @@ export type Database = {
           pre_rempli_fields?: Json
           prenoms?: string | null
           profession?: string | null
+          resident_fiscal_france?: boolean | null
+          testament_date?: string | null
+          testament_existe?: boolean | null
+          testament_lieu_depot?: string | null
         }
         Relationships: [
           {
