@@ -19,12 +19,17 @@ export type AssetTypeKey = (typeof ASSET_TYPES)[number]["key"];
 export interface FieldDef {
   name: string;
   label: string;
-  type: "text" | "number" | "textarea" | "select" | "radio" | "file";
+  type: "text" | "number" | "textarea" | "select" | "radio" | "file" | "checkbox";
   required?: boolean;
   placeholder?: string;
   options?: { value: string; label: string }[];
   suffix?: string;
   colSpan?: 1 | 2;
+  defaultValue?: any;
+  /** Show this field only when the predicate is true (based on current form values). */
+  showIf?: (values: Record<string, any>) => boolean;
+  /** Optional info banner shown under the field when predicate is true. */
+  info?: { message: string; when?: (values: Record<string, any>) => boolean };
 }
 
 export interface AssetAlert {
