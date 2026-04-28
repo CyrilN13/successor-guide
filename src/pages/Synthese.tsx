@@ -101,15 +101,6 @@ interface Observations {
 }
 
 type InventaireChoice = "forfait" | "joint" | "neant";
-interface Donation {
-  id: string;
-  beneficiaire_name: string | null;
-  date_donation: string | null;
-  type_donation: string | null;
-  montant: number | null;
-  dans_15_ans: boolean | null;
-  enregistree_fiscalement: boolean | null;
-}
 
 const fmtEuro = (n: number) =>
   new Intl.NumberFormat("fr-FR", {
