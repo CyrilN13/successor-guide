@@ -301,10 +301,15 @@ function AssetDialogForm({
       >
         {config.fields
           .filter((f) => f.type !== "file")
+          .filter((f) => (f.showIf ? f.showIf(watchedValues) : true))
           .map((f) => (
             <div
               key={f.name}
-              className={f.colSpan === 2 || f.type === "radio" ? "col-span-full" : ""}
+              className={
+                f.colSpan === 2 || f.type === "radio" || f.type === "checkbox"
+                  ? "col-span-full"
+                  : ""
+              }
             >
               <RenderField field={f} control={form.control} />
             </div>
