@@ -58,6 +58,22 @@ const STATUTS = [
   { value: "non_precise", label: "Je n'ai pas encore décidé" },
 ];
 
+const SITUATIONS_MATRIMONIALES = [
+  { value: "celibataire", label: "Célibataire" },
+  { value: "marie", label: "Marié(e)" },
+  { value: "pacse", label: "Pacsé(e)" },
+  { value: "divorce", label: "Divorcé(e)" },
+  { value: "veuf", label: "Veuf(ve)" },
+];
+
+const REGIMES_MATRIMONIAUX = [
+  "Communauté d'acquêts à défaut de contrat préalable",
+  "Communauté universelle",
+  "Séparation de biens",
+  "Participation aux acquêts",
+  "Autre",
+];
+
 const heritierSchema = z.object({
   civilite: z.enum(["M.", "Mme"], { required_error: "La civilité est requise" }),
   nom_naissance: z.string().trim().min(1, "Le nom de naissance est requis").max(100),
@@ -76,6 +92,20 @@ const heritierSchema = z.object({
   adresse_ville: z.string().trim().max(100).optional().or(z.literal("")),
   adresse_pays: z.string().trim().max(100).optional().or(z.literal("")),
   est_declarant: z.boolean().default(false),
+
+  // Situation matrimoniale
+  situation_matrimoniale: z.string().min(1, "La situation matrimoniale est requise"),
+  conjoint_civilite: z.string().optional().or(z.literal("")),
+  conjoint_nom_naissance: z.string().trim().max(100).optional().or(z.literal("")),
+  conjoint_prenoms: z.string().trim().max(200).optional().or(z.literal("")),
+  date_mariage: z.date().optional(),
+  lieu_mariage: z.string().trim().max(200).optional().or(z.literal("")),
+  regime_matrimonial: z.string().optional().or(z.literal("")),
+  regime_modifie: z.boolean().default(false),
+
+  // Identité administrative
+  nationalite: z.string().trim().min(1, "La nationalité est requise").max(100),
+  resident_fiscal_france: z.boolean().default(true),
 });
 
 type HeritierFormValues = z.infer<typeof heritierSchema>;
@@ -101,6 +131,16 @@ interface Heritier {
   adresse_pays: string | null;
   est_declarant: boolean | null;
   declaration_id: string | null;
+  situation_matrimoniale: string | null;
+  conjoint_civilite: string | null;
+  conjoint_nom_naissance: string | null;
+  conjoint_prenoms: string | null;
+  date_mariage: string | null;
+  lieu_mariage: string | null;
+  regime_matrimonial: string | null;
+  regime_modifie: boolean | null;
+  nationalite: string | null;
+  resident_fiscal_france: boolean | null;
 }
 
 const defaultFormValues: HeritierFormValues = {
@@ -121,7 +161,20 @@ const defaultFormValues: HeritierFormValues = {
   adresse_ville: "",
   adresse_pays: "France",
   est_declarant: false,
+  situation_matrimoniale: "",
+  conjoint_civilite: "",
+  conjoint_nom_naissance: "",
+  conjoint_prenoms: "",
+  date_mariage: undefined,
+  lieu_mariage: "",
+  regime_matrimonial: "",
+  regime_modifie: false,
+  nationalite: "française",
+  resident_fiscal_france: true,
 };
+
+const showConjointFields = (s?: string | null) =>
+  s === "marie" || s === "pacse" || s === "veuf";
 
 const Etape2Heritiers = () => {
   const navigate = useNavigate();
@@ -199,6 +252,16 @@ const Etape2Heritiers = () => {
       adresse_ville: h.adresse_ville ?? "",
       adresse_pays: h.adresse_pays ?? "France",
       est_declarant: !!h.est_declarant,
+      situation_matrimoniale: h.situation_matrimoniale ?? "",
+      conjoint_civilite: h.conjoint_civilite ?? "",
+      conjoint_nom_naissance: h.conjoint_nom_naissance ?? "",
+      conjoint_prenoms: h.conjoint_prenoms ?? "",
+      date_mariage: h.date_mariage ? new Date(h.date_mariage) : undefined,
+      lieu_mariage: h.lieu_mariage ?? "",
+      regime_matrimonial: h.regime_matrimonial ?? "",
+      regime_modifie: !!h.regime_modifie,
+      nationalite: h.nationalite ?? "française",
+      resident_fiscal_france: h.resident_fiscal_france ?? true,
     });
     setDialogOpen(true);
   };
@@ -229,6 +292,16 @@ const Etape2Heritiers = () => {
       adresse_ville: values.adresse_ville || null,
       adresse_pays: values.adresse_pays || null,
       est_declarant: !!values.est_declarant,
+      situation_matrimoniale: values.situation_matrimoniale || null,
+      conjoint_civilite: showConjointFields(values.situation_matrimoniale) ? (values.conjoint_civilite || null) : null,
+      conjoint_nom_naissance: showConjointFields(values.situation_matrimoniale) ? (values.conjoint_nom_naissance || null) : null,
+      conjoint_prenoms: showConjointFields(values.situation_matrimoniale) ? (values.conjoint_prenoms || null) : null,
+      date_mariage: values.situation_matrimoniale === "marie" && values.date_mariage ? format(values.date_mariage, "yyyy-MM-dd") : null,
+      lieu_mariage: values.situation_matrimoniale === "marie" ? (values.lieu_mariage || null) : null,
+      regime_matrimonial: showConjointFields(values.situation_matrimoniale) ? (values.regime_matrimonial || null) : null,
+      regime_modifie: showConjointFields(values.situation_matrimoniale) ? !!values.regime_modifie : false,
+      nationalite: values.nationalite || null,
+      resident_fiscal_france: !!values.resident_fiscal_france,
     };
 
     await track(async () => {
@@ -676,6 +749,212 @@ const Etape2Heritiers = () => {
                   </FormItem>
                 )}
               />
+
+              {/* Situation matrimoniale */}
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Situation matrimoniale de l'héritier</p>
+                <FormField
+                  control={form.control}
+                  name="situation_matrimoniale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Situation *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {SITUATIONS_MATRIMONIALES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {showConjointFields(form.watch("situation_matrimoniale")) && (
+                  <div className="space-y-3 pt-2 border-t">
+                    <p className="text-sm font-medium">Conjoint</p>
+
+                    <FormField
+                      control={form.control}
+                      name="conjoint_civilite"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Civilité</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value || ""}
+                              className="flex gap-6 mt-1"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="M." id="hc-civ-m" />
+                                <Label htmlFor="hc-civ-m" className="cursor-pointer">M.</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Mme" id="hc-civ-mme" />
+                                <Label htmlFor="hc-civ-mme" className="cursor-pointer">Mme</Label>
+                              </div>
+                            </RadioGroup>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name="conjoint_nom_naissance"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nom de naissance</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Martin" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="conjoint_prenoms"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prénoms</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Jean Pierre" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {form.watch("situation_matrimoniale") === "marie" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="date_mariage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date du mariage</FormLabel>
+                              <FormControl>
+                                <DateInput
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  max={new Date().toISOString().split("T")[0]}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="lieu_mariage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Lieu du mariage</FormLabel>
+                              <FormControl>
+                                <Input placeholder="MEYZIEU (69330)" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    <FormField
+                      control={form.control}
+                      name="regime_matrimonial"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Régime matrimonial</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner le régime" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {REGIMES_MATRIMONIAUX.map((r) => (
+                                <SelectItem key={r} value={r}>
+                                  {r}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="regime_modifie"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-start space-x-2">
+                            <Checkbox
+                              id="regime-modifie"
+                              checked={!!field.value}
+                              onCheckedChange={(c) => field.onChange(!!c)}
+                            />
+                            <Label htmlFor="regime-modifie" className="cursor-pointer text-sm leading-snug">
+                              Ce régime a été modifié depuis le mariage
+                            </Label>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Identité administrative */}
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Identité administrative</p>
+                <FormField
+                  control={form.control}
+                  name="nationalite"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nationalité</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="française"
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                          onBlur={field.onBlur}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="resident_fiscal_france"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="h-resident-fiscal"
+                          checked={!!field.value}
+                          onCheckedChange={(c) => field.onChange(!!c)}
+                        />
+                        <Label htmlFor="h-resident-fiscal" className="cursor-pointer text-sm leading-snug">
+                          Résident fiscal en France au sens de la réglementation fiscale
+                        </Label>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

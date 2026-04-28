@@ -16,33 +16,51 @@ export type Database = {
     Tables: {
       actif_items: {
         Row: {
+          banque_adresse: string | null
+          banque_nom: string | null
           declaration_id: string | null
           details: Json | null
+          detenu_en_indivision: boolean | null
           id: string
           justificatif_url: string | null
           libelle: string | null
+          numero_compte: string | null
           pre_rempli: boolean | null
+          quote_part_pct: number | null
           type_bien: string | null
+          type_compte_precis: string | null
           valeur_estimee: number | null
         }
         Insert: {
+          banque_adresse?: string | null
+          banque_nom?: string | null
           declaration_id?: string | null
           details?: Json | null
+          detenu_en_indivision?: boolean | null
           id?: string
           justificatif_url?: string | null
           libelle?: string | null
+          numero_compte?: string | null
           pre_rempli?: boolean | null
+          quote_part_pct?: number | null
           type_bien?: string | null
+          type_compte_precis?: string | null
           valeur_estimee?: number | null
         }
         Update: {
+          banque_adresse?: string | null
+          banque_nom?: string | null
           declaration_id?: string | null
           details?: Json | null
+          detenu_en_indivision?: boolean | null
           id?: string
           justificatif_url?: string | null
           libelle?: string | null
+          numero_compte?: string | null
           pre_rempli?: boolean | null
+          quote_part_pct?: number | null
           type_bien?: string | null
+          type_compte_precis?: string | null
           valeur_estimee?: number | null
         }
         Relationships: [
