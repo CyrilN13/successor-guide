@@ -415,21 +415,51 @@ const Etape3Actif = () => {
 
     const cfg = ASSET_CONFIGS[activeType];
     const valeur = Number(values[cfg.valeurField]) || 0;
-    const details: Record<string, any> = {};
-    for (const f of cfg.fields) {
-      if (f.name !== "libelle" && f.name !== cfg.valeurField) {
-        const v = values[f.name];
-        details[f.name] = v === "" || v === undefined ? null : v;
-      }
+
+    // Compute libelle: explicit libelle field if present, otherwise derive
+    // from a meaningful field of the type (for compte_bancaire => label of
+    // selected type_compte_precis).
+    let libelle: string | null = (values.libelle as string) ?? null;
+    if (!libelle && activeType === "compte_bancaire") {
+      const typeField = cfg.fields.find((f) => f.name === "type_compte_precis");
+      const opt = typeField?.options?.find(
+        (o) => o.value === values.type_compte_precis,
+      );
+      libelle = opt?.label ?? null;
     }
 
-    const payload = {
+    // Build details JSON, excluding fields that are persisted as top-level columns.
+    const topLevel = new Set<string>(
+      activeType === "compte_bancaire" ? COMPTE_TOP_LEVEL_FIELDS : [],
+    );
+    const details: Record<string, any> = {};
+    for (const f of cfg.fields) {
+      if (f.name === "libelle" || f.name === cfg.valeurField) continue;
+      if (topLevel.has(f.name)) continue;
+      const v = values[f.name];
+      details[f.name] = v === "" || v === undefined ? null : v;
+    }
+
+    const payload: Record<string, any> = {
       declaration_id: declarationId,
       type_bien: activeType,
-      libelle: (values.libelle as string) ?? null,
+      libelle,
       valeur_estimee: valeur,
       details,
     };
+
+    if (activeType === "compte_bancaire") {
+      const indivision = values.detenu_en_indivision === true;
+      payload.banque_nom = values.banque_nom || null;
+      payload.banque_adresse = values.banque_adresse || null;
+      payload.numero_compte = values.numero_compte || null;
+      payload.type_compte_precis = values.type_compte_precis || null;
+      payload.detenu_en_indivision = indivision;
+      payload.quote_part_pct = indivision
+        ? Number(values.quote_part_pct) || null
+        : null;
+    }
+
 
     let saveError: { message: string } | null = null;
     await track(async () => {
