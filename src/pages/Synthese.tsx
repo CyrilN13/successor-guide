@@ -1155,12 +1155,12 @@ const Synthese = () => {
         </CardContent>
       </Card>
 
-      {/* Section 7 — Alertes */}
+      {/* Section 8 — Alertes */}
       {alerts.length > 0 && (
         <Card className="mb-6">
           <CardContent className="p-6">
             <h2 className="mb-4 font-serif text-xl font-semibold text-primary">
-              7. Alertes
+              8. Alertes
             </h2>
             <div className="space-y-3">
               {alerts.map((a, i) => (
