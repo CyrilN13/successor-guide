@@ -173,6 +173,9 @@ const defaultFormValues: HeritierFormValues = {
   resident_fiscal_france: true,
 };
 
+const showConjointFields = (s?: string | null) =>
+  s === "marie" || s === "pacse" || s === "veuf";
+
 const Etape2Heritiers = () => {
   const navigate = useNavigate();
   const [declarationId, setDeclarationId] = useState<string | null>(null);
