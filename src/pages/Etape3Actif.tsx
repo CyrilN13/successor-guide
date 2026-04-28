@@ -91,6 +91,32 @@ function RenderField({
   field: FieldDef;
   control: any;
 }) {
+  if (fieldDef.type === "checkbox") {
+    return (
+      <FormField
+        control={control}
+        name={fieldDef.name}
+        render={({ field }) => (
+          <FormItem
+            className={`flex flex-row items-center space-x-2 space-y-0 ${
+              fieldDef.colSpan === 2 ? "col-span-full" : ""
+            }`}
+          >
+            <FormControl>
+              <Checkbox
+                checked={!!field.value}
+                onCheckedChange={(c) => field.onChange(c === true)}
+              />
+            </FormControl>
+            <FormLabel className="cursor-pointer font-normal">
+              {fieldDef.label}
+            </FormLabel>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    );
+  }
   return (
     <FormField
       control={control}
