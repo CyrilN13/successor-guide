@@ -754,11 +754,11 @@ const Etape1Defunt = () => {
             </CardContent>
           </Card>
 
-          {/* Nationalité & Situation */}
+          {/* Identité administrative */}
           <Card>
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-6 space-y-4">
               <h2 className="font-heading text-lg font-semibold">
-                Nationalité et situation
+                Identité administrative
               </h2>
 
               <FormField
@@ -767,25 +767,114 @@ const Etape1Defunt = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nationalité *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {NATIONALITES.map((n) => (
-                          <SelectItem key={n} value={n}>
-                            {n}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        placeholder="française"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                        onBlur={field.onBlur}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="resident_fiscal_france"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="resident-fiscal"
+                        checked={!!field.value}
+                        onCheckedChange={(c) => field.onChange(!!c)}
+                      />
+                      <Label htmlFor="resident-fiscal" className="cursor-pointer text-sm leading-snug">
+                        Le défunt était résident fiscal en France au sens de la réglementation fiscale
+                      </Label>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Dispositions de dernières volontés */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <h2 className="font-heading text-lg font-semibold">
+                Dispositions de dernières volontés
+              </h2>
+
+              <p className="text-sm text-muted-foreground italic">
+                Si vous cochez NON (cas le plus courant), nous générerons automatiquement la mention « Il n'est pas connu de disposition testamentaire ou autre à cause de mort » dans la déclaration.
+              </p>
+
+              <FormField
+                control={form.control}
+                name="testament_existe"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="testament-existe"
+                        checked={!!field.value}
+                        onCheckedChange={(c) => field.onChange(!!c)}
+                      />
+                      <Label htmlFor="testament-existe" className="cursor-pointer text-sm leading-snug">
+                        Le défunt avait laissé un testament ou une autre disposition à cause de mort
+                      </Label>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {testamentExiste && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <FormField
+                    control={form.control}
+                    name="testament_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date du testament</FormLabel>
+                        <FormControl>
+                          <DateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            max={new Date().toISOString().split("T")[0]}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="testament_lieu_depot"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lieu de dépôt</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Étude de Maître Dupont, notaire à Lyon" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Situation matrimoniale */}
+          <Card>
+            <CardContent className="p-6 space-y-6">
+              <h2 className="font-heading text-lg font-semibold">
+                Situation matrimoniale
+              </h2>
               <FormField
                 control={form.control}
                 name="situation_matrimoniale"
