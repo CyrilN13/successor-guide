@@ -3,7 +3,7 @@ import { AlertTriangle, Info } from "lucide-react";
 
 // ─── Type definitions ───
 export const ASSET_TYPES = [
-  { key: "compte_bancaire", label: "Comptes bancaires" },
+  { key: "compte_bancaire", label: "Comptes bancaires et livrets" },
   { key: "immobilier", label: "Immobilier" },
   { key: "vehicule", label: "Véhicules" },
   { key: "titres", label: "Titres et portefeuilles" },
