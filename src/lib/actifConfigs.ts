@@ -3,7 +3,7 @@ import { AlertTriangle, Info } from "lucide-react";
 
 // ─── Type definitions ───
 export const ASSET_TYPES = [
-  { key: "compte_bancaire", label: "Comptes bancaires" },
+  { key: "compte_bancaire", label: "Comptes bancaires et livrets" },
   { key: "immobilier", label: "Immobilier" },
   { key: "vehicule", label: "Véhicules" },
   { key: "titres", label: "Titres et portefeuilles" },
@@ -19,12 +19,17 @@ export type AssetTypeKey = (typeof ASSET_TYPES)[number]["key"];
 export interface FieldDef {
   name: string;
   label: string;
-  type: "text" | "number" | "textarea" | "select" | "radio" | "file";
+  type: "text" | "number" | "textarea" | "select" | "radio" | "file" | "checkbox";
   required?: boolean;
   placeholder?: string;
   options?: { value: string; label: string }[];
   suffix?: string;
   colSpan?: 1 | 2;
+  defaultValue?: any;
+  /** Show this field only when the predicate is true (based on current form values). */
+  showIf?: (values: Record<string, any>) => boolean;
+  /** Optional info banner shown under the field when predicate is true. */
+  info?: { message: string; when?: (values: Record<string, any>) => boolean };
 }
 
 export interface AssetAlert {
@@ -43,12 +48,87 @@ export interface AssetTypeConfig {
 // ─── Configs per type ───
 export const ASSET_CONFIGS: Record<AssetTypeKey, AssetTypeConfig> = {
   compte_bancaire: {
-    valeurField: "solde",
+    valeurField: "valeur_estimee",
     fields: [
-      { name: "libelle", label: "Libellé", type: "text", required: true, placeholder: "Compte courant Crédit Agricole" },
-      { name: "banque", label: "Banque", type: "text", required: true, placeholder: "Crédit Agricole" },
-      { name: "iban", label: "N° de compte ou IBAN", type: "text", placeholder: "FR76 …" },
-      { name: "solde", label: "Solde au jour du décès (€)", type: "number", required: true, suffix: "€" },
+      {
+        name: "banque_nom",
+        label: "Nom de l'établissement bancaire",
+        type: "text",
+        required: true,
+        placeholder: "Caisse d'Epargne Rhône Alpes - Service Successions",
+        colSpan: 2,
+      },
+      {
+        name: "banque_adresse",
+        label: "Adresse de la banque",
+        type: "textarea",
+        required: true,
+        placeholder: "Tour INCITY 116 Boulevard Lafayette BP 3276 69404 LYON CEDEX 03",
+        colSpan: 2,
+      },
+      {
+        name: "type_compte_precis",
+        label: "Type de compte",
+        type: "select",
+        required: true,
+        colSpan: 2,
+        options: [
+          { value: "livret_a", label: "Livret A" },
+          { value: "livret_b", label: "Livret B" },
+          { value: "livret_jeune", label: "Livret Jeune" },
+          { value: "ldds", label: "Livret de développement durable et solidaire (LDDS)" },
+          { value: "lep", label: "Livret d'épargne populaire (LEP)" },
+          { value: "pel", label: "Plan d'épargne logement (PEL)" },
+          { value: "cel", label: "Compte épargne logement (CEL)" },
+          { value: "compte_depot", label: "Compte de dépôt" },
+          { value: "compte_courant", label: "Compte courant" },
+          { value: "compte_titres", label: "Compte titres ordinaires" },
+          { value: "pea", label: "PEA" },
+          { value: "pea_pme", label: "PEA-PME" },
+          { value: "autre", label: "Autre" },
+        ],
+      },
+      {
+        name: "numero_compte",
+        label: "Numéro de compte",
+        type: "text",
+        required: true,
+        placeholder: "Ex : 00200-00294483209",
+        colSpan: 2,
+      },
+      {
+        name: "valeur_estimee",
+        label: "Solde au jour du décès (€)",
+        type: "number",
+        required: true,
+        suffix: "€",
+        colSpan: 2,
+      },
+      {
+        name: "detenu_en_indivision",
+        label: "Compte détenu en indivision",
+        type: "checkbox",
+        defaultValue: false,
+        colSpan: 2,
+      },
+      {
+        name: "quote_part_pct",
+        label: "Quote-part du défunt (%)",
+        type: "number",
+        required: true,
+        defaultValue: 50,
+        colSpan: 2,
+        showIf: (v) => v.detenu_en_indivision === true,
+      },
+    ],
+    alerts: [
+      {
+        type: "info",
+        icon: Info,
+        condition: (v) => v.detenu_en_indivision === true,
+        message:
+          "En cas d'indivision, le solde porté ci-dessus doit correspondre à la quote-part du défunt et non au solde total du compte. Indiquez la quote-part en % pour que la déclaration mentionne la détention partielle.",
+      },
     ],
   },
 
@@ -223,16 +303,45 @@ export function buildSchema(config: AssetTypeConfig) {
   for (const f of config.fields) {
     if (f.type === "file") continue;
     let s: z.ZodTypeAny;
-    if (f.type === "number") {
-      s = f.required
-        ? z.coerce.number({ required_error: `${f.label} est requis` }).positive(`${f.label} doit être positif`)
-        : z.coerce.number().positive().optional().or(z.literal("")).or(z.literal(0));
+    if (f.type === "checkbox") {
+      s = z.boolean().optional().default(false);
+    } else if (f.type === "number") {
+      // Always optional at the field level — required-when-visible is enforced in superRefine.
+      s = z.coerce.number().positive().optional().or(z.literal("")).or(z.nan());
     } else {
-      s = f.required
-        ? z.string().trim().min(1, `${f.label} est requis`).max(500)
-        : z.string().trim().max(500).optional().or(z.literal(""));
+      s = z.string().trim().max(500).optional().or(z.literal(""));
     }
     shape[f.name] = s;
   }
-  return z.object(shape);
+
+  return z.object(shape).superRefine((values, ctx) => {
+    for (const f of config.fields) {
+      if (f.type === "file" || f.type === "checkbox") continue;
+      const visible = f.showIf ? f.showIf(values) : true;
+      if (!visible) continue;
+      if (!f.required) continue;
+      const v = (values as any)[f.name];
+      const isEmpty =
+        v === "" ||
+        v === null ||
+        v === undefined ||
+        (typeof v === "number" && Number.isNaN(v));
+      if (isEmpty) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [f.name],
+          message: `${f.label} est requis`,
+        });
+        continue;
+      }
+      if (f.type === "number" && typeof v === "number" && v <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [f.name],
+          message: `${f.label} doit être positif`,
+        });
+      }
+    }
+  });
 }
+

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -61,7 +62,23 @@ interface ActifItem {
   valeur_estimee: number | null;
   details: Record<string, any> | null;
   declaration_id: string | null;
+  banque_nom?: string | null;
+  banque_adresse?: string | null;
+  numero_compte?: string | null;
+  type_compte_precis?: string | null;
+  detenu_en_indivision?: boolean | null;
+  quote_part_pct?: number | null;
 }
+
+// Top-level columns persisted on actif_items (vs JSON in details)
+const COMPTE_TOP_LEVEL_FIELDS = [
+  "banque_nom",
+  "banque_adresse",
+  "numero_compte",
+  "type_compte_precis",
+  "detenu_en_indivision",
+  "quote_part_pct",
+] as const;
 
 const formatEur = (n: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
@@ -74,6 +91,32 @@ function RenderField({
   field: FieldDef;
   control: any;
 }) {
+  if (fieldDef.type === "checkbox") {
+    return (
+      <FormField
+        control={control}
+        name={fieldDef.name}
+        render={({ field }) => (
+          <FormItem
+            className={`flex flex-row items-center space-x-2 space-y-0 ${
+              fieldDef.colSpan === 2 ? "col-span-full" : ""
+            }`}
+          >
+            <FormControl>
+              <Checkbox
+                checked={!!field.value}
+                onCheckedChange={(c) => field.onChange(c === true)}
+              />
+            </FormControl>
+            <FormLabel className="cursor-pointer font-normal">
+              {fieldDef.label}
+            </FormLabel>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    );
+  }
   return (
     <FormField
       control={control}
@@ -185,10 +228,18 @@ function AssetDialogForm({
 
   const computeDefaults = (): Record<string, any> => {
     const defaults: Record<string, any> = Object.fromEntries(
-      config.fields.map((f) => [f.name, ""]),
+      config.fields.map((f) => [
+        f.name,
+        f.defaultValue !== undefined
+          ? f.defaultValue
+          : f.type === "checkbox"
+          ? false
+          : "",
+      ]),
     );
     if (initialItem) {
       const details = initialItem.details ?? {};
+      const item = initialItem as Record<string, any>;
       for (const f of config.fields) {
         if (f.name === "libelle") defaults[f.name] = initialItem.libelle ?? "";
         else if (f.name === config.valeurField)
@@ -196,7 +247,18 @@ function AssetDialogForm({
             initialItem.valeur_estimee !== null && initialItem.valeur_estimee !== undefined
               ? String(initialItem.valeur_estimee)
               : "";
-        else defaults[f.name] = details[f.name] ?? "";
+        else if (item[f.name] !== undefined && item[f.name] !== null) {
+          // Top-level column on actif_items takes precedence over details JSON
+          defaults[f.name] =
+            f.type === "checkbox"
+              ? item[f.name] === true
+              : f.type === "number"
+              ? String(item[f.name])
+              : item[f.name];
+        } else if (details[f.name] !== undefined && details[f.name] !== null) {
+          defaults[f.name] =
+            f.type === "checkbox" ? details[f.name] === true : details[f.name];
+        }
       }
     } else if (type === "immobilier") {
       defaults.quote_part = "100";
@@ -239,10 +301,15 @@ function AssetDialogForm({
       >
         {config.fields
           .filter((f) => f.type !== "file")
+          .filter((f) => (f.showIf ? f.showIf(watchedValues) : true))
           .map((f) => (
             <div
               key={f.name}
-              className={f.colSpan === 2 || f.type === "radio" ? "col-span-full" : ""}
+              className={
+                f.colSpan === 2 || f.type === "radio" || f.type === "checkbox"
+                  ? "col-span-full"
+                  : ""
+              }
             >
               <RenderField field={f} control={form.control} />
             </div>
@@ -348,21 +415,51 @@ const Etape3Actif = () => {
 
     const cfg = ASSET_CONFIGS[activeType];
     const valeur = Number(values[cfg.valeurField]) || 0;
-    const details: Record<string, any> = {};
-    for (const f of cfg.fields) {
-      if (f.name !== "libelle" && f.name !== cfg.valeurField) {
-        const v = values[f.name];
-        details[f.name] = v === "" || v === undefined ? null : v;
-      }
+
+    // Compute libelle: explicit libelle field if present, otherwise derive
+    // from a meaningful field of the type (for compte_bancaire => label of
+    // selected type_compte_precis).
+    let libelle: string | null = (values.libelle as string) ?? null;
+    if (!libelle && activeType === "compte_bancaire") {
+      const typeField = cfg.fields.find((f) => f.name === "type_compte_precis");
+      const opt = typeField?.options?.find(
+        (o) => o.value === values.type_compte_precis,
+      );
+      libelle = opt?.label ?? null;
     }
 
-    const payload = {
+    // Build details JSON, excluding fields that are persisted as top-level columns.
+    const topLevel = new Set<string>(
+      activeType === "compte_bancaire" ? COMPTE_TOP_LEVEL_FIELDS : [],
+    );
+    const details: Record<string, any> = {};
+    for (const f of cfg.fields) {
+      if (f.name === "libelle" || f.name === cfg.valeurField) continue;
+      if (topLevel.has(f.name)) continue;
+      const v = values[f.name];
+      details[f.name] = v === "" || v === undefined ? null : v;
+    }
+
+    const payload: Record<string, any> = {
       declaration_id: declarationId,
       type_bien: activeType,
-      libelle: (values.libelle as string) ?? null,
+      libelle,
       valeur_estimee: valeur,
       details,
     };
+
+    if (activeType === "compte_bancaire") {
+      const indivision = values.detenu_en_indivision === true;
+      payload.banque_nom = values.banque_nom || null;
+      payload.banque_adresse = values.banque_adresse || null;
+      payload.numero_compte = values.numero_compte || null;
+      payload.type_compte_precis = values.type_compte_precis || null;
+      payload.detenu_en_indivision = indivision;
+      payload.quote_part_pct = indivision
+        ? Number(values.quote_part_pct) || null
+        : null;
+    }
+
 
     let saveError: { message: string } | null = null;
     await track(async () => {
