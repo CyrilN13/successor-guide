@@ -182,6 +182,7 @@ const Etape1Defunt = () => {
 
   const situationMatrimoniale = form.watch("situation_matrimoniale");
   const neEtranger = form.watch("ne_etranger");
+  const testamentExiste = form.watch("testament_existe");
   const showRegime = situationMatrimoniale === "Marié(e)";
   const showConjoint =
     situationMatrimoniale === "Marié(e)" ||
