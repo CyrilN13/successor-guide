@@ -691,6 +691,69 @@ const Etape1Defunt = () => {
             </CardContent>
           </Card>
 
+          {/* Lieu du décès */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="font-heading text-lg font-semibold">Lieu du décès</h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    form.setValue("lieu_deces_ville", form.getValues("adresse_ville") || "", { shouldDirty: true });
+                    form.setValue("lieu_deces_code_postal", form.getValues("adresse_code_postal") || "", { shouldDirty: true });
+                    form.setValue("lieu_deces_pays", form.getValues("adresse_pays") || "France", { shouldDirty: true });
+                  }}
+                >
+                  Identique au domicile
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="lieu_deces_code_postal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Code postal *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="69004" maxLength={5} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lieu_deces_ville"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ville *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Lyon" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lieu_deces_pays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pays *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="France" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Nationalité & Situation */}
           <Card>
             <CardContent className="p-6 space-y-6">
