@@ -303,16 +303,45 @@ export function buildSchema(config: AssetTypeConfig) {
   for (const f of config.fields) {
     if (f.type === "file") continue;
     let s: z.ZodTypeAny;
-    if (f.type === "number") {
-      s = f.required
-        ? z.coerce.number({ required_error: `${f.label} est requis` }).positive(`${f.label} doit être positif`)
-        : z.coerce.number().positive().optional().or(z.literal("")).or(z.literal(0));
+    if (f.type === "checkbox") {
+      s = z.boolean().optional().default(false);
+    } else if (f.type === "number") {
+      // Always optional at the field level — required-when-visible is enforced in superRefine.
+      s = z.coerce.number().positive().optional().or(z.literal("")).or(z.nan());
     } else {
-      s = f.required
-        ? z.string().trim().min(1, `${f.label} est requis`).max(500)
-        : z.string().trim().max(500).optional().or(z.literal(""));
+      s = z.string().trim().max(500).optional().or(z.literal(""));
     }
     shape[f.name] = s;
   }
-  return z.object(shape);
+
+  return z.object(shape).superRefine((values, ctx) => {
+    for (const f of config.fields) {
+      if (f.type === "file" || f.type === "checkbox") continue;
+      const visible = f.showIf ? f.showIf(values) : true;
+      if (!visible) continue;
+      if (!f.required) continue;
+      const v = (values as any)[f.name];
+      const isEmpty =
+        v === "" ||
+        v === null ||
+        v === undefined ||
+        (typeof v === "number" && Number.isNaN(v));
+      if (isEmpty) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [f.name],
+          message: `${f.label} est requis`,
+        });
+        continue;
+      }
+      if (f.type === "number" && typeof v === "number" && v <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [f.name],
+          message: `${f.label} doit être positif`,
+        });
+      }
+    }
+  });
 }
+
