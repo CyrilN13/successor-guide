@@ -1174,11 +1174,11 @@ const Synthese = () => {
         </Card>
       )}
 
-      {/* Section 8 — Checklist */}
+      {/* Section 9 — Checklist */}
       <Card className="mb-6">
         <CardContent className="p-6">
           <h2 className="mb-4 font-serif text-xl font-semibold text-primary">
-            8. Pièces à réunir
+            9. Pièces à réunir
           </h2>
           <ul className="space-y-2 text-sm">
             {checklist.map((c, i) => (
