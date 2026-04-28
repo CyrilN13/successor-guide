@@ -212,6 +212,96 @@ const Synthese = () => {
     })();
   }, [navigate]);
 
+  // ─── Auto-uncheck "pas de donation" si des donations sont déclarées ───
+  useEffect(() => {
+    if (!declarationId) return;
+    if (donations.length > 0 && obs.obs_pas_de_donation) {
+      setObs((o) => ({ ...o, obs_pas_de_donation: false }));
+      void supabase
+        .from("declarations")
+        .update({ obs_pas_de_donation: false } as any)
+        .eq("id", declarationId);
+    }
+  }, [donations.length, declarationId, obs.obs_pas_de_donation]);
+
+  // ─── Persist a single observation column ───
+  const updateObs = useCallback(
+    async (patch: Partial<Observations>) => {
+      setObs((o) => ({ ...o, ...patch }));
+      if (!declarationId) return;
+      const { error } = await (supabase.from("declarations") as any)
+        .update(patch)
+        .eq("id", declarationId);
+      if (error) toast.error("Erreur d'enregistrement : " + error.message);
+    },
+    [declarationId],
+  );
+
+  // ─── Inventaire : choix radio ───
+  const inventaireChoice: InventaireChoice | null = obs.obs_forfait_mobilier_5pct
+    ? "forfait"
+    : obs.obs_inventaire_joint
+    ? "joint"
+    : obs.obs_meubles_neant
+    ? "neant"
+    : null;
+
+  const setInventaireChoice = (choice: InventaireChoice) => {
+    void updateObs({
+      obs_forfait_mobilier_5pct: choice === "forfait",
+      obs_inventaire_joint: choice === "joint",
+      obs_meubles_neant: choice === "neant",
+      // si un inventaire est joint, alors un inventaire a été dressé
+      obs_pas_d_inventaire: choice !== "joint",
+    });
+  };
+
+  // ─── Modale assurance-vie ───
+  const openAvDialog = (a: ActifItem) => {
+    setAvEditing(a);
+    setAvForm({
+      av_compagnie: a.av_compagnie ?? "",
+      av_adresse_compagnie: a.av_adresse_compagnie ?? "",
+      av_numero_police: a.av_numero_police ?? "",
+      av_date_souscription: a.av_date_souscription ?? "",
+      av_souscrite_apres_70_ans: a.av_souscrite_apres_70_ans ?? false,
+      av_primes_apres_70_ans:
+        a.av_primes_apres_70_ans !== null && a.av_primes_apres_70_ans !== undefined
+          ? String(a.av_primes_apres_70_ans)
+          : "",
+    });
+    setAvDialogOpen(true);
+  };
+
+  const saveAvDialog = async () => {
+    if (!avEditing) return;
+    setAvSaving(true);
+    const payload: Record<string, any> = {
+      av_compagnie: avForm.av_compagnie || null,
+      av_adresse_compagnie: avForm.av_adresse_compagnie || null,
+      av_numero_police: avForm.av_numero_police || null,
+      av_date_souscription: avForm.av_date_souscription || null,
+      av_souscrite_apres_70_ans: avForm.av_souscrite_apres_70_ans,
+      av_primes_apres_70_ans: avForm.av_souscrite_apres_70_ans
+        ? Number(avForm.av_primes_apres_70_ans) || null
+        : null,
+    };
+    const { error } = await (supabase.from("actif_items") as any)
+      .update(payload)
+      .eq("id", avEditing.id);
+    setAvSaving(false);
+    if (error) {
+      toast.error("Erreur d'enregistrement : " + error.message);
+      return;
+    }
+    setActifs((prev) =>
+      prev.map((it) => (it.id === avEditing.id ? { ...it, ...payload } : it)),
+    );
+    toast.success("Informations enregistrées");
+    setAvDialogOpen(false);
+    setAvEditing(null);
+  };
+
   // ─── Calculations ───
   const actifsByType = ASSET_TYPES.map((t) => {
     const items = actifs.filter((i) => i.type_bien === t.key);
