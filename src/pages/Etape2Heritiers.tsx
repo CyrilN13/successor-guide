@@ -750,6 +750,212 @@ const Etape2Heritiers = () => {
                 )}
               />
 
+              {/* Situation matrimoniale */}
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Situation matrimoniale de l'héritier</p>
+                <FormField
+                  control={form.control}
+                  name="situation_matrimoniale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Situation *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {SITUATIONS_MATRIMONIALES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {showConjointFields(form.watch("situation_matrimoniale")) && (
+                  <div className="space-y-3 pt-2 border-t">
+                    <p className="text-sm font-medium">Conjoint</p>
+
+                    <FormField
+                      control={form.control}
+                      name="conjoint_civilite"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Civilité</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value || ""}
+                              className="flex gap-6 mt-1"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="M." id="hc-civ-m" />
+                                <Label htmlFor="hc-civ-m" className="cursor-pointer">M.</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Mme" id="hc-civ-mme" />
+                                <Label htmlFor="hc-civ-mme" className="cursor-pointer">Mme</Label>
+                              </div>
+                            </RadioGroup>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <FormField
+                        control={form.control}
+                        name="conjoint_nom_naissance"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nom de naissance</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Martin" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="conjoint_prenoms"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prénoms</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Jean Pierre" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {form.watch("situation_matrimoniale") === "marie" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="date_mariage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date du mariage</FormLabel>
+                              <FormControl>
+                                <DateInput
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  max={new Date().toISOString().split("T")[0]}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="lieu_mariage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Lieu du mariage</FormLabel>
+                              <FormControl>
+                                <Input placeholder="MEYZIEU (69330)" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+
+                    <FormField
+                      control={form.control}
+                      name="regime_matrimonial"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Régime matrimonial</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner le régime" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {REGIMES_MATRIMONIAUX.map((r) => (
+                                <SelectItem key={r} value={r}>
+                                  {r}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="regime_modifie"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-start space-x-2">
+                            <Checkbox
+                              id="regime-modifie"
+                              checked={!!field.value}
+                              onCheckedChange={(c) => field.onChange(!!c)}
+                            />
+                            <Label htmlFor="regime-modifie" className="cursor-pointer text-sm leading-snug">
+                              Ce régime a été modifié depuis le mariage
+                            </Label>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Identité administrative */}
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Identité administrative</p>
+                <FormField
+                  control={form.control}
+                  name="nationalite"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nationalité</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="française"
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                          onBlur={field.onBlur}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="resident_fiscal_france"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="h-resident-fiscal"
+                          checked={!!field.value}
+                          onCheckedChange={(c) => field.onChange(!!c)}
+                        />
+                        <Label htmlFor="h-resident-fiscal" className="cursor-pointer text-sm leading-snug">
+                          Résident fiscal en France au sens de la réglementation fiscale
+                        </Label>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
                 name="email_notification"
