@@ -125,6 +125,29 @@ const Synthese = () => {
   const [passifs, setPassifs] = useState<PassifItem[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
 
+  // ─── Observations préliminaires ───
+  const [obs, setObs] = useState<Observations>({
+    obs_pas_de_creance: true,
+    obs_pas_de_donation: true,
+    obs_pas_d_inventaire: true,
+    obs_forfait_mobilier_5pct: true,
+    obs_inventaire_joint: false,
+    obs_meubles_neant: false,
+  });
+
+  // ─── Modale assurance-vie : informations légales ───
+  const [avDialogOpen, setAvDialogOpen] = useState(false);
+  const [avEditing, setAvEditing] = useState<ActifItem | null>(null);
+  const [avSaving, setAvSaving] = useState(false);
+  const [avForm, setAvForm] = useState({
+    av_compagnie: "",
+    av_adresse_compagnie: "",
+    av_numero_police: "",
+    av_date_souscription: "",
+    av_souscrite_apres_70_ans: false,
+    av_primes_apres_70_ans: "",
+  });
+
   // ─── Load all data ───
   useEffect(() => {
     (async () => {
