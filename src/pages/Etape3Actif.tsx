@@ -228,10 +228,18 @@ function AssetDialogForm({
 
   const computeDefaults = (): Record<string, any> => {
     const defaults: Record<string, any> = Object.fromEntries(
-      config.fields.map((f) => [f.name, ""]),
+      config.fields.map((f) => [
+        f.name,
+        f.defaultValue !== undefined
+          ? f.defaultValue
+          : f.type === "checkbox"
+          ? false
+          : "",
+      ]),
     );
     if (initialItem) {
       const details = initialItem.details ?? {};
+      const item = initialItem as Record<string, any>;
       for (const f of config.fields) {
         if (f.name === "libelle") defaults[f.name] = initialItem.libelle ?? "";
         else if (f.name === config.valeurField)
@@ -239,7 +247,18 @@ function AssetDialogForm({
             initialItem.valeur_estimee !== null && initialItem.valeur_estimee !== undefined
               ? String(initialItem.valeur_estimee)
               : "";
-        else defaults[f.name] = details[f.name] ?? "";
+        else if (item[f.name] !== undefined && item[f.name] !== null) {
+          // Top-level column on actif_items takes precedence over details JSON
+          defaults[f.name] =
+            f.type === "checkbox"
+              ? item[f.name] === true
+              : f.type === "number"
+              ? String(item[f.name])
+              : item[f.name];
+        } else if (details[f.name] !== undefined && details[f.name] !== null) {
+          defaults[f.name] =
+            f.type === "checkbox" ? details[f.name] === true : details[f.name];
+        }
       }
     } else if (type === "immobilier") {
       defaults.quote_part = "100";
