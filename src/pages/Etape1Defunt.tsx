@@ -83,7 +83,7 @@ const defuntSchema = z
     pays_naissance: z.string().optional().or(z.literal("")),
     lieu_naissance: z.string().trim().min(1, "Le lieu (commune) de naissance est requis").max(200),
     death_date: z.date({ required_error: "La date de décès est requise" }),
-    lieu_deces: z.string().trim().min(1, "Le lieu de décès est requis").max(200),
+    lieu_deces: z.string().trim().max(200).optional().or(z.literal("")),
     lieu_deces_ville: z.string().trim().min(1, "La ville du décès est requise").max(100),
     lieu_deces_code_postal: z.string().trim().regex(/^\d{5}$/, "Code postal à 5 chiffres requis"),
     lieu_deces_pays: z.string().trim().min(1, "Le pays du décès est requis").max(100),
