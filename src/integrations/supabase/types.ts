@@ -16,6 +16,12 @@ export type Database = {
     Tables: {
       actif_items: {
         Row: {
+          av_adresse_compagnie: string | null
+          av_compagnie: string | null
+          av_date_souscription: string | null
+          av_numero_police: string | null
+          av_primes_apres_70_ans: number | null
+          av_souscrite_apres_70_ans: boolean | null
           banque_adresse: string | null
           banque_nom: string | null
           declaration_id: string | null
@@ -32,6 +38,12 @@ export type Database = {
           valeur_estimee: number | null
         }
         Insert: {
+          av_adresse_compagnie?: string | null
+          av_compagnie?: string | null
+          av_date_souscription?: string | null
+          av_numero_police?: string | null
+          av_primes_apres_70_ans?: number | null
+          av_souscrite_apres_70_ans?: boolean | null
           banque_adresse?: string | null
           banque_nom?: string | null
           declaration_id?: string | null
@@ -48,6 +60,12 @@ export type Database = {
           valeur_estimee?: number | null
         }
         Update: {
+          av_adresse_compagnie?: string | null
+          av_compagnie?: string | null
+          av_date_souscription?: string | null
+          av_numero_police?: string | null
+          av_primes_apres_70_ans?: number | null
+          av_souscrite_apres_70_ans?: boolean | null
           banque_adresse?: string | null
           banque_nom?: string | null
           declaration_id?: string | null
@@ -159,6 +177,12 @@ export type Database = {
           eligibility_passed: boolean | null
           id: string
           mode: string | null
+          obs_forfait_mobilier_5pct: boolean | null
+          obs_inventaire_joint: boolean | null
+          obs_meubles_neant: boolean | null
+          obs_pas_d_inventaire: boolean | null
+          obs_pas_de_creance: boolean | null
+          obs_pas_de_donation: boolean | null
           purge_scheduled_at: string | null
           status: string | null
           updated_at: string | null
@@ -172,6 +196,12 @@ export type Database = {
           eligibility_passed?: boolean | null
           id?: string
           mode?: string | null
+          obs_forfait_mobilier_5pct?: boolean | null
+          obs_inventaire_joint?: boolean | null
+          obs_meubles_neant?: boolean | null
+          obs_pas_d_inventaire?: boolean | null
+          obs_pas_de_creance?: boolean | null
+          obs_pas_de_donation?: boolean | null
           purge_scheduled_at?: string | null
           status?: string | null
           updated_at?: string | null
@@ -185,6 +215,12 @@ export type Database = {
           eligibility_passed?: boolean | null
           id?: string
           mode?: string | null
+          obs_forfait_mobilier_5pct?: boolean | null
+          obs_inventaire_joint?: boolean | null
+          obs_meubles_neant?: boolean | null
+          obs_pas_d_inventaire?: boolean | null
+          obs_pas_de_creance?: boolean | null
+          obs_pas_de_donation?: boolean | null
           purge_scheduled_at?: string | null
           status?: string | null
           updated_at?: string | null
