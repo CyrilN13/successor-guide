@@ -605,39 +605,24 @@ const Etape1Defunt = () => {
                 />
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="death_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date de décès *</FormLabel>
-                      <FormControl>
-                        <DateInput
-                          value={field.value}
-                          onChange={(d) => field.onChange(d)}
-                          onBlur={field.onBlur}
-                          max={new Date().toISOString().split("T")[0]}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lieu_deces"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lieu de décès *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Lyon" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="death_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date de décès *</FormLabel>
+                    <FormControl>
+                      <DateInput
+                        value={field.value}
+                        onChange={(d) => field.onChange(d)}
+                        onBlur={field.onBlur}
+                        max={new Date().toISOString().split("T")[0]}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 
