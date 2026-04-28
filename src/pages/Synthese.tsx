@@ -899,11 +899,179 @@ const Synthese = () => {
         </Card>
       )}
 
-      {/* Section 6 — Estimation fiscale */}
+      {/* Section 6 — Observations préliminaires */}
+      <Card className="mb-6">
+        <CardContent className="p-6 space-y-6">
+          <h2 className="font-serif text-xl font-semibold text-primary">
+            6. Observations préliminaires
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Ces déclarations seront reportées dans les mentions légales du formulaire
+            CERFA 2705-SD. Décochez ou modifiez celles qui ne correspondent pas à votre
+            situation.
+          </p>
+
+          {/* 1. Aucune créance */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="obs-creance"
+                checked={obs.obs_pas_de_creance}
+                onCheckedChange={(c) =>
+                  updateObs({ obs_pas_de_creance: c === true })
+                }
+                className="mt-1"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="obs-creance" className="cursor-pointer font-medium">
+                  Aucune créance d'aide ou d'assistance à faire valoir contre la
+                  succession
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Cocher si personne ne réclame de remboursement pour avoir aidé le
+                  défunt (proche aidant, EHPAD, ami…).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Aucune donation */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="obs-donation"
+                checked={obs.obs_pas_de_donation}
+                disabled={donations.length > 0}
+                onCheckedChange={(c) =>
+                  updateObs({ obs_pas_de_donation: c === true })
+                }
+                className="mt-1"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="obs-donation" className="cursor-pointer font-medium">
+                  Le défunt n'a consenti aucune donation antérieurement
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Si vous avez déclaré des donations à l'étape 5, décochez cette case.
+                </p>
+              </div>
+            </div>
+            {donations.length > 0 && (
+              <Alert className="border-yellow-400 bg-yellow-50 text-yellow-900">
+                <AlertTriangle className="h-4 w-4 text-yellow-700" />
+                <AlertDescription className="text-sm">
+                  Vous avez déclaré des donations antérieures. La mention « absence de
+                  donation » n'est plus possible.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          {/* 3 + 4. Inventaire */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="obs-inventaire"
+                checked={obs.obs_pas_d_inventaire}
+                onCheckedChange={(c) =>
+                  updateObs({
+                    obs_pas_d_inventaire: c === true,
+                    // si on coche "aucun inventaire dressé", forcer "inventaire joint" à false
+                    obs_inventaire_joint:
+                      c === true ? false : obs.obs_inventaire_joint,
+                  })
+                }
+                className="mt-1"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="obs-inventaire" className="cursor-pointer font-medium">
+                  Aucun inventaire n'a été dressé à la suite du décès
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Le forfait mobilier 5 % est l'option la plus courante. Il évite de
+                  faire dresser un inventaire.
+                </p>
+              </div>
+            </div>
+
+            <div className="ml-7 rounded-md border border-border bg-muted/30 p-4">
+              <RadioGroup
+                value={inventaireChoice ?? ""}
+                onValueChange={(v) => setInventaireChoice(v as InventaireChoice)}
+                className="space-y-2"
+              >
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="forfait" id="inv-forfait" className="mt-1" />
+                  <Label htmlFor="inv-forfait" className="cursor-pointer font-normal">
+                    Application du forfait mobilier 5 %
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="joint" id="inv-joint" className="mt-1" />
+                  <Label htmlFor="inv-joint" className="cursor-pointer font-normal">
+                    Un inventaire est joint à la déclaration
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="neant" id="inv-neant" className="mt-1" />
+                  <Label htmlFor="inv-neant" className="cursor-pointer font-normal">
+                    Le défunt ne possédait aucun meuble meublant ni objet mobilier
+                    (hors garde-robe)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+
+          {/* 5. Assurances-vie : compléter informations légales */}
+          {actifs.filter((a) => a.type_bien === "assurance_vie").length > 0 && (
+            <div className="space-y-2 rounded-md border border-border p-4">
+              <h3 className="font-medium text-primary">
+                Informations légales — assurance-vie
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Complétez les informations légales nécessaires à la mention dans la
+                déclaration et, le cas échéant, à l'annexe CERFA 2705-A-SD.
+              </p>
+              <ul className="mt-2 space-y-2">
+                {actifs
+                  .filter((a) => a.type_bien === "assurance_vie")
+                  .map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-background p-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {a.libelle ?? "Contrat d'assurance-vie"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {a.av_compagnie
+                            ? `${a.av_compagnie} · `
+                            : ""}
+                          {fmtEuro(Number(a.valeur_estimee || 0))}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openAvDialog(a)}
+                      >
+                        Compléter les informations légales
+                      </Button>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 7 — Estimation fiscale */}
       <Card className="mb-6 border-accent">
         <CardContent className="p-6">
           <h2 className="mb-4 font-serif text-xl font-semibold text-primary">
-            6. Estimation fiscale
+            7. Estimation fiscale
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-md border border-border p-4">
