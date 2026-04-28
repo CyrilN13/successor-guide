@@ -369,19 +369,29 @@ export type Database = {
           adresse_ville: string | null
           birth_date: string | null
           civilite: string | null
+          conjoint_civilite: string | null
+          conjoint_nom_naissance: string | null
+          conjoint_prenoms: string | null
+          date_mariage: string | null
           declaration_id: string | null
           email_notification: string | null
           est_declarant: boolean | null
           full_name: string | null
           id: string
           lien_parente: string | null
+          lieu_mariage: string | null
           lieu_naissance: string | null
+          nationalite: string | null
           nom_naissance: string | null
           nom_usage: string | null
           ordre: number | null
           pre_rempli_fields: Json
           prenoms: string | null
           profession: string | null
+          regime_matrimonial: string | null
+          regime_modifie: boolean | null
+          resident_fiscal_france: boolean | null
+          situation_matrimoniale: string | null
           status: string | null
           telephone: string | null
         }
@@ -392,19 +402,29 @@ export type Database = {
           adresse_ville?: string | null
           birth_date?: string | null
           civilite?: string | null
+          conjoint_civilite?: string | null
+          conjoint_nom_naissance?: string | null
+          conjoint_prenoms?: string | null
+          date_mariage?: string | null
           declaration_id?: string | null
           email_notification?: string | null
           est_declarant?: boolean | null
           full_name?: string | null
           id?: string
           lien_parente?: string | null
+          lieu_mariage?: string | null
           lieu_naissance?: string | null
+          nationalite?: string | null
           nom_naissance?: string | null
           nom_usage?: string | null
           ordre?: number | null
           pre_rempli_fields?: Json
           prenoms?: string | null
           profession?: string | null
+          regime_matrimonial?: string | null
+          regime_modifie?: boolean | null
+          resident_fiscal_france?: boolean | null
+          situation_matrimoniale?: string | null
           status?: string | null
           telephone?: string | null
         }
@@ -415,19 +435,29 @@ export type Database = {
           adresse_ville?: string | null
           birth_date?: string | null
           civilite?: string | null
+          conjoint_civilite?: string | null
+          conjoint_nom_naissance?: string | null
+          conjoint_prenoms?: string | null
+          date_mariage?: string | null
           declaration_id?: string | null
           email_notification?: string | null
           est_declarant?: boolean | null
           full_name?: string | null
           id?: string
           lien_parente?: string | null
+          lieu_mariage?: string | null
           lieu_naissance?: string | null
+          nationalite?: string | null
           nom_naissance?: string | null
           nom_usage?: string | null
           ordre?: number | null
           pre_rempli_fields?: Json
           prenoms?: string | null
           profession?: string | null
+          regime_matrimonial?: string | null
+          regime_modifie?: boolean | null
+          resident_fiscal_france?: boolean | null
+          situation_matrimoniale?: string | null
           status?: string | null
           telephone?: string | null
         }
