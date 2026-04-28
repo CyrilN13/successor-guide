@@ -66,6 +66,12 @@ interface ActifItem {
   libelle: string | null;
   valeur_estimee: number | null;
   details: Record<string, any> | null;
+  av_compagnie?: string | null;
+  av_adresse_compagnie?: string | null;
+  av_numero_police?: string | null;
+  av_date_souscription?: string | null;
+  av_souscrite_apres_70_ans?: boolean | null;
+  av_primes_apres_70_ans?: number | null;
 }
 interface PassifItem {
   id: string;
@@ -75,6 +81,26 @@ interface PassifItem {
   existait_au_deces: string | null;
   details: Record<string, any> | null;
 }
+interface Donation {
+  id: string;
+  beneficiaire_name: string | null;
+  date_donation: string | null;
+  type_donation: string | null;
+  montant: number | null;
+  dans_15_ans: boolean | null;
+  enregistree_fiscalement: boolean | null;
+}
+
+interface Observations {
+  obs_pas_de_creance: boolean;
+  obs_pas_de_donation: boolean;
+  obs_pas_d_inventaire: boolean;
+  obs_forfait_mobilier_5pct: boolean;
+  obs_inventaire_joint: boolean;
+  obs_meubles_neant: boolean;
+}
+
+type InventaireChoice = "forfait" | "joint" | "neant";
 interface Donation {
   id: string;
   beneficiaire_name: string | null;
