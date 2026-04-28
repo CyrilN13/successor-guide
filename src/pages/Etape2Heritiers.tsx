@@ -131,6 +131,16 @@ interface Heritier {
   adresse_pays: string | null;
   est_declarant: boolean | null;
   declaration_id: string | null;
+  situation_matrimoniale: string | null;
+  conjoint_civilite: string | null;
+  conjoint_nom_naissance: string | null;
+  conjoint_prenoms: string | null;
+  date_mariage: string | null;
+  lieu_mariage: string | null;
+  regime_matrimonial: string | null;
+  regime_modifie: boolean | null;
+  nationalite: string | null;
+  resident_fiscal_france: boolean | null;
 }
 
 const defaultFormValues: HeritierFormValues = {
@@ -151,6 +161,16 @@ const defaultFormValues: HeritierFormValues = {
   adresse_ville: "",
   adresse_pays: "France",
   est_declarant: false,
+  situation_matrimoniale: "",
+  conjoint_civilite: "",
+  conjoint_nom_naissance: "",
+  conjoint_prenoms: "",
+  date_mariage: undefined,
+  lieu_mariage: "",
+  regime_matrimonial: "",
+  regime_modifie: false,
+  nationalite: "française",
+  resident_fiscal_france: true,
 };
 
 const Etape2Heritiers = () => {
