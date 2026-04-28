@@ -41,19 +41,6 @@ import {
 } from "@/components/ui/form";
 import { DEPARTEMENTS_FR } from "@/lib/departementsFR";
 
-const NATIONALITES = [
-  "Française",
-  "Allemande",
-  "Belge",
-  "Britannique",
-  "Espagnole",
-  "Italienne",
-  "Luxembourgeoise",
-  "Portugaise",
-  "Suisse",
-  "Autre",
-];
-
 const SITUATIONS_MATRIMONIALES = [
   "Célibataire",
   "Marié(e)",
@@ -83,12 +70,19 @@ const defuntSchema = z
     pays_naissance: z.string().optional().or(z.literal("")),
     lieu_naissance: z.string().trim().min(1, "Le lieu (commune) de naissance est requis").max(200),
     death_date: z.date({ required_error: "La date de décès est requise" }),
-    lieu_deces: z.string().trim().min(1, "Le lieu de décès est requis").max(200),
+    lieu_deces: z.string().trim().max(200).optional().or(z.literal("")),
+    lieu_deces_ville: z.string().trim().min(1, "La ville du décès est requise").max(100),
+    lieu_deces_code_postal: z.string().trim().regex(/^\d{5}$/, "Code postal à 5 chiffres requis"),
+    lieu_deces_pays: z.string().trim().min(1, "Le pays du décès est requis").max(100),
     adresse_rue: z.string().trim().min(1, "L'adresse est requise").max(300),
     adresse_code_postal: z.string().trim().min(1, "Le code postal est requis").max(10),
     adresse_ville: z.string().trim().min(1, "La ville est requise").max(100),
     adresse_pays: z.string().trim().min(1, "Le pays est requis").max(100),
-    nationalite: z.string().min(1, "La nationalité est requise"),
+    nationalite: z.string().trim().min(1, "La nationalité est requise").max(100),
+    resident_fiscal_france: z.boolean().default(true),
+    testament_existe: z.boolean().default(false),
+    testament_date: z.date().optional(),
+    testament_lieu_depot: z.string().trim().max(300).optional().or(z.literal("")),
     situation_matrimoniale: z.string().min(1, "La situation matrimoniale est requise"),
     regime_matrimonial: z.string().optional().or(z.literal("")),
 
@@ -144,11 +138,18 @@ const Etape1Defunt = () => {
       pays_naissance: "",
       lieu_naissance: "",
       lieu_deces: "",
+      lieu_deces_ville: "",
+      lieu_deces_code_postal: "",
+      lieu_deces_pays: "France",
       adresse_rue: "",
       adresse_code_postal: "",
       adresse_ville: "",
       adresse_pays: "France",
-      nationalite: "Française",
+      nationalite: "française",
+      resident_fiscal_france: true,
+      testament_existe: false,
+      testament_date: undefined,
+      testament_lieu_depot: "",
       situation_matrimoniale: "",
       regime_matrimonial: "",
       conjoint_civilite: "",
@@ -168,6 +169,7 @@ const Etape1Defunt = () => {
 
   const situationMatrimoniale = form.watch("situation_matrimoniale");
   const neEtranger = form.watch("ne_etranger");
+  const testamentExiste = form.watch("testament_existe");
   const showRegime = situationMatrimoniale === "Marié(e)";
   const showConjoint =
     situationMatrimoniale === "Marié(e)" ||
@@ -214,14 +216,21 @@ const Etape1Defunt = () => {
           departement_naissance: d.departement_naissance ?? "",
           pays_naissance: d.pays_naissance ?? "",
           birth_date: d.birth_date ? new Date(d.birth_date) : (undefined as any),
-          lieu_naissance: details.lieu_naissance ?? "",
+          lieu_naissance: d.commune_naissance ?? details.lieu_naissance ?? "",
           death_date: d.death_date ? new Date(d.death_date) : (undefined as any),
           lieu_deces: d.death_place ?? "",
+          lieu_deces_ville: d.lieu_deces_ville ?? "",
+          lieu_deces_code_postal: d.lieu_deces_code_postal ?? "",
+          lieu_deces_pays: d.lieu_deces_pays ?? "France",
           adresse_rue: d.adresse_rue ?? details.adresse_rue ?? "",
           adresse_code_postal: d.adresse_code_postal ?? details.adresse_code_postal ?? "",
           adresse_ville: d.adresse_ville ?? details.adresse_ville ?? "",
           adresse_pays: d.adresse_pays ?? details.adresse_pays ?? "France",
-          nationalite: d.nationality ?? "Française",
+          nationalite: d.nationality ?? "française",
+          resident_fiscal_france: d.resident_fiscal_france ?? true,
+          testament_existe: d.testament_existe ?? false,
+          testament_date: d.testament_date ? new Date(d.testament_date) : undefined,
+          testament_lieu_depot: d.testament_lieu_depot ?? "",
           situation_matrimoniale: d.marital_status ?? "",
           regime_matrimonial: d.matrimonial_regime ?? "",
           conjoint_civilite: d.conjoint_civilite ?? "",
@@ -266,14 +275,22 @@ const Etape1Defunt = () => {
         birth_date: fmtDate(values.birth_date),
         death_date: fmtDate(values.death_date),
         death_place: values.lieu_deces || null,
+        lieu_deces_ville: values.lieu_deces_ville || null,
+        lieu_deces_code_postal: values.lieu_deces_code_postal || null,
+        lieu_deces_pays: values.lieu_deces_pays || null,
         departement_naissance: values.ne_etranger ? null : values.departement_naissance || null,
         pays_naissance: values.ne_etranger ? values.pays_naissance || null : "France",
+        commune_naissance: values.lieu_naissance || null,
         domicile,
         adresse_rue: values.adresse_rue || null,
         adresse_code_postal: values.adresse_code_postal || null,
         adresse_ville: values.adresse_ville || null,
         adresse_pays: values.adresse_pays || null,
         nationality: values.nationalite || null,
+        resident_fiscal_france: values.resident_fiscal_france,
+        testament_existe: values.testament_existe,
+        testament_date: values.testament_existe ? fmtDate(values.testament_date) : null,
+        testament_lieu_depot: values.testament_existe ? (values.testament_lieu_depot || null) : null,
         marital_status: values.situation_matrimoniale || null,
         matrimonial_regime: showRegime ? values.regime_matrimonial || null : null,
 
@@ -575,39 +592,24 @@ const Etape1Defunt = () => {
                 />
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="death_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date de décès *</FormLabel>
-                      <FormControl>
-                        <DateInput
-                          value={field.value}
-                          onChange={(d) => field.onChange(d)}
-                          onBlur={field.onBlur}
-                          max={new Date().toISOString().split("T")[0]}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lieu_deces"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lieu de décès *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Lyon" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="death_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date de décès *</FormLabel>
+                    <FormControl>
+                      <DateInput
+                        value={field.value}
+                        onChange={(d) => field.onChange(d)}
+                        onBlur={field.onBlur}
+                        max={new Date().toISOString().split("T")[0]}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 
@@ -676,11 +678,74 @@ const Etape1Defunt = () => {
             </CardContent>
           </Card>
 
-          {/* Nationalité & Situation */}
+          {/* Lieu du décès */}
           <Card>
-            <CardContent className="p-6 space-y-6">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="font-heading text-lg font-semibold">Lieu du décès</h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    form.setValue("lieu_deces_ville", form.getValues("adresse_ville") || "", { shouldDirty: true });
+                    form.setValue("lieu_deces_code_postal", form.getValues("adresse_code_postal") || "", { shouldDirty: true });
+                    form.setValue("lieu_deces_pays", form.getValues("adresse_pays") || "France", { shouldDirty: true });
+                  }}
+                >
+                  Identique au domicile
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="lieu_deces_code_postal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Code postal *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="69004" maxLength={5} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lieu_deces_ville"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ville *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Lyon" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lieu_deces_pays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pays *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="France" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Identité administrative */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
               <h2 className="font-heading text-lg font-semibold">
-                Nationalité et situation
+                Identité administrative
               </h2>
 
               <FormField
@@ -689,25 +754,114 @@ const Etape1Defunt = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nationalité *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {NATIONALITES.map((n) => (
-                          <SelectItem key={n} value={n}>
-                            {n}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        placeholder="française"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                        onBlur={field.onBlur}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="resident_fiscal_france"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="resident-fiscal"
+                        checked={!!field.value}
+                        onCheckedChange={(c) => field.onChange(!!c)}
+                      />
+                      <Label htmlFor="resident-fiscal" className="cursor-pointer text-sm leading-snug">
+                        Le défunt était résident fiscal en France au sens de la réglementation fiscale
+                      </Label>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Dispositions de dernières volontés */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <h2 className="font-heading text-lg font-semibold">
+                Dispositions de dernières volontés
+              </h2>
+
+              <p className="text-sm text-muted-foreground italic">
+                Si vous cochez NON (cas le plus courant), nous générerons automatiquement la mention « Il n'est pas connu de disposition testamentaire ou autre à cause de mort » dans la déclaration.
+              </p>
+
+              <FormField
+                control={form.control}
+                name="testament_existe"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start space-x-2">
+                      <Checkbox
+                        id="testament-existe"
+                        checked={!!field.value}
+                        onCheckedChange={(c) => field.onChange(!!c)}
+                      />
+                      <Label htmlFor="testament-existe" className="cursor-pointer text-sm leading-snug">
+                        Le défunt avait laissé un testament ou une autre disposition à cause de mort
+                      </Label>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {testamentExiste && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <FormField
+                    control={form.control}
+                    name="testament_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date du testament</FormLabel>
+                        <FormControl>
+                          <DateInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            max={new Date().toISOString().split("T")[0]}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="testament_lieu_depot"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lieu de dépôt</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Étude de Maître Dupont, notaire à Lyon" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Situation matrimoniale */}
+          <Card>
+            <CardContent className="p-6 space-y-6">
+              <h2 className="font-heading text-lg font-semibold">
+                Situation matrimoniale
+              </h2>
               <FormField
                 control={form.control}
                 name="situation_matrimoniale"
